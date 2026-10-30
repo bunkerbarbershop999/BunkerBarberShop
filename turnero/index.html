@@ -1,0 +1,55 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Pedí tu turno · Barbería Enzo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,600&display=swap" rel="stylesheet">
+<style>:root{--ground:#eef1f3;--surface:#fff;--raised:#f4f6f8;--active:#e3e8eb;--border:#e3e7ea;--rule:#eff1f2;--control:#c3c8cc;--text:#131416;--muted:#5d5f60;--accent:#0d7480;--positive:#1e7b4f;--negative:#c4242a;--gap:24px;--pad:24px;--ch:32px}
+*{box-sizing:border-box;margin:0}
+body{background:var(--ground);color:var(--text);font:400 14px/20px "IBM Plex Sans",system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+button,select,input,textarea{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--control);border-radius:6px;height:var(--ch);padding:0 10px}
+textarea{height:auto;padding:6px 10px}
+button{cursor:pointer}button:hover{background:var(--raised)}button.p{background:var(--text);color:#fff;border-color:var(--text)}button.p:hover{background:#2b2d30}
+button.t{border:0;background:none;padding:0 6px;text-decoration:underline;text-underline-offset:3px;height:28px}button.t:hover{background:none;color:var(--accent)}
+button.d{color:var(--negative)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+h1{font:600 22px/28px "IBM Plex Sans",sans-serif}.sub{color:var(--muted);margin-top:2px}h3{font:600 16px/24px "IBM Plex Sans";margin:var(--gap) 0 12px}
+.pill{display:inline-block;height:20px;line-height:20px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap;background:#ebedee;color:#353736}
+.pill.pos{background:#dcfae5;color:#04250e}.pill.warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a;line-height:18px}.pill.neg{background:#ffedea;color:#831c1e}.pill.inf{background:#e0f2f5;color:#0b4f58}
+.empty{border:1px dashed var(--control);border-radius:8px;padding:10px 16px;color:var(--muted)}
+dialog{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:24px;width:min(92%,420px)}dialog::backdrop{background:rgba(19,20,22,.4)}
+dialog form{display:grid;gap:12px;margin-top:12px}dialog label{display:flex;flex-direction:column;gap:6px;font-weight:500}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+body{padding:16px}.box{max-width:460px;margin:4vh auto;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;display:grid;gap:14px}
+.box h1{font:600 30px/1.1 "Bricolage Grotesque",sans-serif;color:var(--accent)}
+label{display:flex;flex-direction:column;gap:6px;font-weight:500}input,select,textarea{width:100%}
+.g{display:grid;grid-template-columns:64px repeat(3,1fr);gap:6px;align-items:center}.g span{color:var(--muted);font-size:12px;text-align:center}.g b{font-weight:500}
+.g button{height:44px}.g button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+#err{color:var(--negative);font-weight:500}.big{height:44px}
+</style></head><body>
+<div class="box" id="b"></div>
+<script src="../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const {SB_URL,SB_KEY}=window.CFG,sb=supabase.createClient(SB_URL,SB_KEY),$=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money=n=>"$"+Number(n||0).toLocaleString("es-AR",{maximumFractionDigits:0});
+const DIAS=[["lun","Lun"],["mar","Mar"],["mie","Mié"],["jue","Jue"],["vie","Vie"],["sab","Sáb"]],FRAN=[["man","Mañana"],["tar","Tarde"],["noc","Noche"]];
+let S=[],sel=new Set();
+(async()=>{const{data}=await sb.from("servicios").select("*").order("precio");S=data||[];draw()})();
+function draw(){
+ $("#b").innerHTML=`<h1>Pedí tu turno</h1><p style="color:var(--muted)">Marcá todos los horarios en los que podés venir. Mientras más marques, más fácil es acomodarte.</p>
+ <form id="f" style="display:grid;gap:14px"><label>Nombre<input name="n" autocomplete="given-name" required></label><label>Apellido<input name="a" autocomplete="family-name"></label>
+ <label>WhatsApp (con código de área, sin 0 ni 15)<input name="t" inputmode="tel" placeholder="3534123456" required></label>
+ <label>Servicio<select name="s">${S.map(s=>`<option value="${s.id}">${esc(s.nombre)} · ${money(s.precio)}</option>`).join("")}</select></label>
+ <div><b style="font-weight:600">¿Cuándo podés?</b><div class="g" style="margin-top:8px"><span></span>${FRAN.map(f=>`<span>${f[1]}</span>`).join("")}
+ ${DIAS.map(d=>`<b>${d[1]}</b>`+FRAN.map(f=>{const k=d[0]+"-"+f[0];return`<button type="button" data-k="${k}" class="${sel.has(k)?"on":""}" aria-pressed="${sel.has(k)}">${sel.has(k)?"✓":"+"}</button>`}).join("")).join("")}</div></div>
+ <label>Comentarios (opcional)<textarea name="o" rows="2" maxlength="300"></textarea></label><span id="err"></span><button class="p big">Enviar mis horarios</button></form>`;
+ $("#b").querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{sel.has(b.dataset.k)?sel.delete(b.dataset.k):sel.add(b.dataset.k);b.classList.toggle("on");b.textContent=sel.has(b.dataset.k)?"✓":"+";b.setAttribute("aria-pressed",sel.has(b.dataset.k))});
+ $("#f").onsubmit=async e=>{e.preventDefault();const f=e.target,err=$("#err");err.textContent="";
+  if(!sel.size){err.textContent="Marcá al menos un horario en el que puedas venir.";return}
+  const btn=f.querySelector(".big");btn.disabled=true;btn.textContent="Enviando…";
+  const{error}=await sb.rpc("crear_solicitud",{p_nombre:f.n.value,p_apellido:f.a.value,p_telefono:f.t.value,p_servicio:f.s.value||null,p_disponibilidad:[...sel],p_notas:f.o.value||null});
+  if(error){err.textContent=error.message;btn.disabled=false;btn.textContent="Enviar mis horarios"}
+  else $("#b").innerHTML=`<h1>¡Listo!</h1><p>Enzo recibió tus horarios y te escribe por WhatsApp para confirmarte el turno.</p>`}}
+</script></body></html>

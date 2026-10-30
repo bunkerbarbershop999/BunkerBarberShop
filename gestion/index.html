@@ -1,0 +1,219 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Gestión · Barbería Enzo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,600&display=swap" rel="stylesheet">
+<style>:root{--ground:#eef1f3;--surface:#fff;--raised:#f4f6f8;--active:#e3e8eb;--border:#e3e7ea;--rule:#eff1f2;--control:#c3c8cc;--text:#131416;--muted:#5d5f60;--accent:#0d7480;--positive:#1e7b4f;--negative:#c4242a;--gap:24px;--pad:24px;--ch:32px}
+*{box-sizing:border-box;margin:0}
+body{background:var(--ground);color:var(--text);font:400 14px/20px "IBM Plex Sans",system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+button,select,input,textarea{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--control);border-radius:6px;height:var(--ch);padding:0 10px}
+textarea{height:auto;padding:6px 10px}
+button{cursor:pointer}button:hover{background:var(--raised)}button.p{background:var(--text);color:#fff;border-color:var(--text)}button.p:hover{background:#2b2d30}
+button.t{border:0;background:none;padding:0 6px;text-decoration:underline;text-underline-offset:3px;height:28px}button.t:hover{background:none;color:var(--accent)}
+button.d{color:var(--negative)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+h1{font:600 22px/28px "IBM Plex Sans",sans-serif}.sub{color:var(--muted);margin-top:2px}h3{font:600 16px/24px "IBM Plex Sans";margin:var(--gap) 0 12px}
+.pill{display:inline-block;height:20px;line-height:20px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap;background:#ebedee;color:#353736}
+.pill.pos{background:#dcfae5;color:#04250e}.pill.warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a;line-height:18px}.pill.neg{background:#ffedea;color:#831c1e}.pill.inf{background:#e0f2f5;color:#0b4f58}
+.empty{border:1px dashed var(--control);border-radius:8px;padding:10px 16px;color:var(--muted)}
+dialog{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:24px;width:min(92%,420px)}dialog::backdrop{background:rgba(19,20,22,.4)}
+dialog form{display:grid;gap:12px;margin-top:12px}dialog label{display:flex;flex-direction:column;gap:6px;font-weight:500}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+body{display:grid;grid-template-columns:228px 1fr;min-height:100vh}
+aside{padding:20px 8px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.brand{padding:0 12px 20px}.brand b{font:600 20px/1 "Bricolage Grotesque",sans-serif;letter-spacing:-.03em;color:var(--accent);display:block}.brand span{color:var(--muted);font-size:12px}
+aside a{display:flex;justify-content:space-between;align-items:center;height:34px;padding:0 12px;border-radius:8px;color:var(--text);cursor:pointer}
+aside a:hover,aside a.on{background:var(--active)}aside a.on{font-weight:500}aside a i{font-style:normal;color:var(--muted);font-size:12px}
+.who{margin-top:auto;padding:12px;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis}.who button{margin-top:6px}
+.sheet{margin:8px 8px 8px 0;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:var(--pad);min-width:0}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--gap);margin-bottom:var(--gap);flex-wrap:wrap}
+form.f{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px;align-items:end;background:var(--raised);border-radius:8px;padding:16px;margin-bottom:var(--gap)}
+form.f label{display:flex;flex-direction:column;gap:6px;font-weight:500}form.f input,form.f select{font-weight:400;width:100%}
+form.f .acts{display:flex;gap:8px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));border:1px solid var(--border);border-radius:8px;margin-bottom:var(--gap)}
+.kpi div{padding:16px var(--pad);border-left:1px solid var(--border)}.kpi div:first-child{border:0}.kpi span{color:var(--muted)}.kpi b{display:block;font:400 28px/36px "IBM Plex Sans";font-variant-numeric:tabular-nums}
+.w{overflow-x:auto}table{width:100%;border-collapse:collapse}
+th{font-weight:400;color:var(--muted);font-size:12px;text-align:left;padding:0 10px 8px;white-space:nowrap}th.num{text-align:right}
+td{padding:6px 10px;min-height:48px;border-top:1px solid var(--rule);vertical-align:middle}td.nw{white-space:nowrap}td .m{color:var(--muted);font-size:12px;display:block}
+.tool{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}.tool input[type=search]{width:240px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.chip{font-size:12px;background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:0 6px}.chip.ok{background:var(--accent);color:#fff;border-color:var(--accent)}
+.card{border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px}
+.login{max-width:340px;margin:12vh auto;display:grid;gap:12px}.login b{font:600 34px/1 "Bricolage Grotesque",sans-serif;color:var(--accent)}
+@media(max-width:760px){body{display:block}aside{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:8px}.brand,.who{display:none}aside a{white-space:nowrap;flex:none}.sheet{margin:0;border-radius:0;border:0;padding:16px}}
+</style></head><body>
+<aside id="side"></aside><main class="sheet" id="v"></main><dialog id="d"></dialog>
+<script src="../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const {SB_URL,SB_KEY}=window.CFG,sb=supabase.createClient(SB_URL,SB_KEY);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money=n=>"$"+Number(n||0).toLocaleString("es-AR",{maximumFractionDigits:0});
+const hoy=()=>new Date().toLocaleDateString("en-CA",{timeZone:"America/Argentina/Cordoba"});
+const hh=i=>new Date(i).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",timeZone:"America/Argentina/Cordoba"});
+const sum=(l,f)=>l.reduce((s,x)=>s+f(x),0);
+const DIAS=[["lun","Lunes"],["mar","Martes"],["mie","Miércoles"],["jue","Jueves"],["vie","Viernes"],["sab","Sábado"]];
+const FRAN=[["man","Mañana"],["tar","Tarde"],["noc","Noche"]];
+const slot=s=>{const[d,f]=s.split("-");return DIAS.find(x=>x[0]===d)[1]+" "+FRAN.find(x=>x[0]===f)[1].toLowerCase()};
+const wa=(t,m)=>`https://wa.me/${t.startsWith("54")?t:"549"+t.replace(/^0/,"")}?text=${encodeURIComponent(m)}`;
+const nz=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const cl=c=>(`${c.apellido} ${c.nombre}`).trim()+" · "+c.telefono;
+async function q(p){const r=await p;if(r.error){alert("Error: "+r.error.message);return null}return r}
+
+const NAV=[["cortes","Cortes"],["clientes","Clientes"],["caja","Caja"],["stock","Stock"],["turnos","Turnos"],["planes","Planes"],["reportes","Reportes"]];
+const ST={tab:"cortes",dia:hoy(),cap:4,desde:new Date(Date.now()-30*864e5).toLocaleDateString("en-CA"),hasta:hoy(),q:"",edit:null,fechas:{}};
+let C=[],S=[],PR=[],PL=[],SOL=[],who="";
+
+(async()=>{const{data:{session}}=await sb.auth.getSession();session?start(session):login()})();
+function login(msg){$("#side").innerHTML="";$("#v").style.cssText="margin:0;border:0;background:none";
+ $("#v").innerHTML=`<form class="login" id="lf"><b>Barbería Enzo</b><span style="color:var(--muted)">Gestión · acceso privado</span><input name="e" type="email" placeholder="Email" autocomplete="username" required><input name="p" type="password" placeholder="Contraseña" autocomplete="current-password" required><button class="p">Ingresar</button><span style="color:var(--negative)">${msg||""}</span></form>`;
+ $("#lf").onsubmit=async e=>{e.preventDefault();const f=e.target,{error}=await sb.auth.signInWithPassword({email:f.e.value,password:f.p.value});error?login("Email o contraseña incorrectos."):location.reload()}}
+async function start(s){const{data:ok}=await sb.rpc("es_enzo");if(!ok){await sb.auth.signOut();return login("Esta cuenta no tiene acceso.")}
+ who=s.user.email;$("#v").style.cssText="";ST.tab=location.hash.slice(1)||"cortes";await load()}
+async function load(){
+ const r=await Promise.all([sb.from("clientes").select("*").order("apellido"),sb.from("servicios").select("*").order("precio"),sb.from("productos").select("*").eq("activo",true).order("nombre"),
+  sb.from("planes").select("*,clientes(nombre,apellido)"),sb.from("solicitudes_turno").select("*,clientes(*),servicios(id,nombre,precio)").eq("estado","pendiente").order("created_at")]);
+ const bad=r.find(x=>x.error);if(bad)alert("Falta correr el SQL en Supabase: "+bad.error.message);
+ [C,S,PR,PL,SOL]=r.map(x=>x.data||[]);render()}
+async function render(){
+ $("#side").innerHTML=`<div class="brand"><b>Barbería Enzo</b><span>Gestión</span></div>`+NAV.map(n=>`<a data-act="nav" data-id="${n[0]}" class="${ST.tab===n[0]?"on":""}">${n[1]}${n[0]==="turnos"&&SOL.length?`<i>${SOL.length} nuevas</i>`:""}</a>`).join("")+`<div class="who">${esc(who)}<br><button data-act="out">Salir</button></div>`;
+ $("#v").innerHTML=await ({cortes:vCortes,clientes:vClientes,caja:vCaja,stock:vStock,turnos:vTurnos,planes:vPlanes,reportes:vReportes})[ST.tab]()}
+const head=(t,s,x)=>`<div class="head"><div><h1>${t}</h1><div class="sub">${s||""}</div></div>${x||""}</div>`;
+const fecha=()=>`<input type="date" data-set="dia" value="${ST.dia}" aria-label="Día">`;
+const planDe=(cid,f)=>PL.find(p=>p.cliente_id===cid&&p.pagado&&p.mes===f.slice(0,7)+"-01");
+const clList=()=>`<datalist id="cl">${C.filter(c=>c.activo).map(c=>`<option value="${esc(cl(c))}">`).join("")}</datalist>`;
+const cByLabel=v=>C.find(c=>cl(c)===v);
+const estPill=a=>`<span class="pill ${{pendiente:"warn",listo:"inf",pagado:"pos",cancelado:"neg"}[a.estado]}">${a.estado}${a.metodo_pago?" · "+a.metodo_pago:""}</span>`;
+function pick(t,opts=["Efectivo","Transferencia"]){return new Promise(res=>{const d=$("#d");d.innerHTML=`<h3 style="margin-top:0">${t}</h3><div class="row">${opts.map(o=>`<button class="p" data-v="${o}">${o}</button>`).join("")}<button data-v="">Cancelar</button></div>`;
+ d.onclick=e=>{const b=e.target.closest("[data-v]");if(b){d.close();res(b.dataset.v?b.dataset.v.toLowerCase():null)}};d.oncancel=()=>res(null);d.showModal()})}
+function dlg(t,fields,cb,init){const d=$("#d");d.onclick=null;d.oncancel=null;d.innerHTML=`<h3 style="margin-top:0">${t}</h3><form>${fields}<div class="row"><button class="p">Aceptar</button><button type="button" data-x>Cancelar</button></div></form>`;
+ const f=d.querySelector("form");f.onsubmit=async e=>{e.preventDefault();await cb(new FormData(f));d.close()};f.querySelector("[data-x]").onclick=()=>d.close();init&&init(f);d.showModal()}
+
+/* ---------- CORTES ---------- */
+async function vCortes(){
+ const r=await q(sb.from("atenciones").select("*,clientes(nombre,apellido,telefono),servicios(nombre)").gte("fecha",ST.dia+"T00:00:00-03:00").lte("fecha",ST.dia+"T23:59:59-03:00").order("fecha"));
+ const A=r?.data||[],act=A.filter(a=>a.estado!=="cancelado");
+ return head("Cortes",new Date(ST.dia+"T12:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}),fecha())+
+ `<div class="kpi"><div><span>Cortes del día</span><b>${act.length}</b></div><div><span>Cobrado</span><b>${money(sum(A.filter(a=>a.estado==="pagado"&&!a.cubierto_por_plan),a=>+a.precio))}</b></div><div><span>Listos sin cobrar</span><b>${money(sum(A.filter(a=>a.estado==="listo"&&!a.cubierto_por_plan),a=>+a.precio))}</b></div></div>`+
+ `<form class="f" data-f="corte">${clList()}<label>Cliente<input name="c" list="cl" placeholder="Buscar cliente" required></label>
+ <label>Servicio<select name="s">${S.filter(s=>s.activo).map(s=>`<option value="${s.id}">${esc(s.nombre)} · ${money(s.precio)}</option>`).join("")}</select></label>
+ <label>Hora<input name="h" type="time" value="09:00" required></label><div class="acts"><button class="p">Agendar corte</button></div></form>`+
+ (A.length?`<div class="w"><table><thead><tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th class="num">Precio</th><th>Estado</th><th></th></tr></thead><tbody>`+A.map(a=>`<tr><td class="nw">${hh(a.fecha)}</td><td>${esc((a.clientes.apellido+" "+a.clientes.nombre).trim())}<span class="m">${a.clientes.telefono}</span></td><td>${esc(a.servicios.nombre)}</td>
+ <td class="num">${a.cubierto_por_plan?'<span class="pill">Plan</span>':money(a.precio)}</td><td>${estPill(a)}</td><td class="nw">${
+  ["pendiente","listo"].includes(a.estado)?`${a.estado==="pendiente"?`<button class="t" data-act="listo" data-id="${a.id}">Listo</button>`:""}${a.cubierto_por_plan?"":`<button class="t" data-act="cobrar" data-id="${a.id}">Cobrar</button>`}<button class="t d" data-act="cancelar" data-id="${a.id}">Cancelar</button>`:`<button class="t" data-act="reabrir" data-id="${a.id}">Reabrir</button>`}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">No hay cortes para este día.</p>`)}
+
+/* ---------- CLIENTES ---------- */
+async function vClientes(){
+ const e=C.find(c=>c.id===ST.edit)||{},L=C.filter(c=>!ST.q||nz(cl(c)).includes(nz(ST.q)));
+ const cnt={};(await q(sb.from("atenciones").select("cliente_id").in("estado",["listo","pagado"])))?.data?.forEach(a=>cnt[a.cliente_id]=(cnt[a.cliente_id]||0)+1);
+ return head("Clientes",`${C.filter(c=>c.activo).length} activos`)+
+ `<form class="f" data-f="cliente"><label>Nombre<input name="n" value="${esc(e.nombre)}" required></label><label>Apellido<input name="a" value="${esc(e.apellido)}"></label>
+ <label>Teléfono (con código de área, sin 0 ni 15)<input name="t" inputmode="tel" value="${esc(e.telefono)}" required></label><div class="acts"><button class="p">${e.id?"Guardar":"Agregar cliente"}</button>${e.id?'<button type="button" data-act="cx">Cancelar</button>':""}</div></form>`+
+ `<div class="tool"><input type="search" data-set="q" placeholder="Buscar cliente" value="${esc(ST.q)}"></div>`+
+ (L.length?`<div class="w"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th class="num">Cortes</th><th></th></tr></thead><tbody>`+L.map(c=>`<tr style="${c.activo?"":"opacity:.5"}"><td>${esc((c.apellido+" "+c.nombre).trim())}${c.activo?"":' <span class="pill">de baja</span>'}</td><td>${c.telefono}</td><td class="num">${cnt[c.id]||0}</td>
+ <td class="nw"><button class="t" data-act="editc" data-id="${c.id}">Editar</button><button class="t ${c.activo?"d":""}" data-act="bajac" data-id="${c.id}">${c.activo?"Dar de baja":"Reactivar"}</button></td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">No hay clientes.</p>`)}
+
+/* ---------- CAJA ---------- */
+async function vCaja(){
+ const[m,ci,de]=await Promise.all([q(sb.from("movimientos_caja").select("*").eq("fecha",ST.dia).order("id")),q(sb.from("cierres_caja").select("*").eq("fecha",ST.dia)),q(sb.from("atenciones").select("precio,clientes(nombre,apellido)").eq("estado","listo").eq("cubierto_por_plan",false))]);
+ const M=m?.data||[],cz=ci?.data?.[0],D=de?.data||[];
+ const t=(tp,md)=>sum(M.filter(x=>x.tipo===tp&&x.metodo_pago===md),x=>+x.monto),ef=t("ingreso","efectivo")-t("egreso","efectivo"),tr=t("ingreso","transferencia")-t("egreso","transferencia");
+ ST.ef=ef;ST.tr=tr;
+ return head("Caja","Cierre diario",fecha())+
+ `<div class="kpi"><div><span>Efectivo</span><b>${money(ef)}</b></div><div><span>Transferencias</span><b>${money(tr)}</b></div><div><span>Total del día</span><b>${money(ef+tr)}</b></div><div><span>Listos sin cobrar</span><b>${money(sum(D,x=>+x.precio))}</b></div></div>`+
+ `<h3 style="margin-top:0">Cerrar caja</h3>${cz?`<p class="sub" style="margin-bottom:12px">Cierre guardado: esperado ${money(cz.efectivo_esperado)}, contado ${money(cz.efectivo_contado)}, diferencia <b>${money(cz.diferencia)}</b>.</p>`:""}
+ <form class="f" data-f="cierre"><label>Efectivo contado<input name="c" type="number" step="any" value="${cz?cz.efectivo_contado:""}" required></label><label>Notas<input name="n" value="${esc(cz?.notas)}"></label><div class="acts"><button class="p">${cz?"Actualizar cierre":"Cerrar caja"}</button></div></form>`+
+ `<h3>Gasto, inversión o ingreso manual</h3><form class="f" data-f="mov"><label>Tipo<select name="tp"><option value="egreso">Egreso</option><option value="ingreso">Ingreso</option></select></label>
+ <label>Categoría<select name="ct"><option>gasto</option><option>inversion</option><option>maquina</option><option>otro</option></select></label><label>Monto<input name="m" type="number" step="any" required></label>
+ <label>Medio<select name="md"><option>efectivo</option><option>transferencia</option></select></label><label>Descripción<input name="d"></label><div class="acts"><button class="p">Agregar</button></div></form>`+
+ `<h3>Movimientos del día</h3>`+(M.length?`<div class="w"><table><tbody>`+M.map(x=>`<tr><td>${x.categoria}<span class="m">${esc(x.descripcion)}</span></td><td>${x.metodo_pago}</td><td class="num" style="color:var(--${x.tipo==="egreso"?"negative":"positive"})">${x.tipo==="egreso"?"−":"+"}${money(x.monto)}</td>
+ <td>${x.atencion_id||x.plan_id||x.stock_id?"":`<button class="t d" data-act="delmov" data-id="${x.id}">Eliminar</button>`}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">Sin movimientos.</p>`)}
+
+/* ---------- STOCK ---------- */
+async function vStock(){
+ return head("Stock","Productos y ventas")+
+ `<form class="f" data-f="prod"><label>Producto<input name="n" placeholder="Cera, polvo…" required></label><label>Precio de venta<input name="p" type="number" step="any" value="0"></label><label>Stock mínimo<input name="m" type="number" value="2"></label><div class="acts"><button class="p">Agregar producto</button></div></form>`+
+ (PR.length?`<div class="w"><table><thead><tr><th>Producto</th><th class="num">Precio</th><th class="num">Stock</th><th></th></tr></thead><tbody>`+PR.map(p=>`<tr><td>${esc(p.nombre)}</td><td class="num">${money(p.precio_venta)}</td><td class="num">${p.stock<=p.stock_minimo?`<span class="pill neg">${p.stock} · poco</span>`:p.stock}</td>
+ <td class="nw"><button class="t" data-act="stin" data-id="${p.id}">Ingreso</button><button class="t" data-act="stven" data-id="${p.id}">Vender</button><button class="t d" data-act="delp" data-id="${p.id}">Baja</button></td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">Todavía no cargaste productos.</p>`)}
+
+/* ---------- TURNOS ---------- */
+function sugerir(sols,cap){const cupo={},res={},dem={};sols.forEach(s=>s.disponibilidad.forEach(k=>dem[k]=(dem[k]||0)+1));
+ [...sols].sort((a,b)=>a.disponibilidad.length-b.disponibilidad.length).forEach(s=>{const o=s.disponibilidad.filter(k=>(cupo[k]||0)<cap).sort((a,b)=>(cupo[b]||0)-(cupo[a]||0)||dem[b]-dem[a]);if(o[0]){cupo[o[0]]=(cupo[o[0]]||0)+1;res[s.id]=o[0]}});return res}
+async function vTurnos(){
+ const sug=sugerir(SOL,ST.cap),sin=SOL.filter(s=>!sug[s.id]),link=location.origin+location.pathname.replace(/gestion\/(index\.html)?$/,"turnero/"),dem={};
+ SOL.forEach(s=>s.disponibilidad.forEach(k=>dem[k]=(dem[k]||0)+1));
+ return head("Turnos","Solicitudes del turnero")+
+ `<form class="f"><label>Link para mandar a los clientes<input readonly value="${esc(link)}"></label><div class="acts"><button type="button" data-act="copiar" data-v="${esc(link)}">Copiar link</button></div>
+ <label>Cortes máximos por franja<input type="number" min="1" data-set="cap" value="${ST.cap}"></label></form>`+
+ (sin.length?`<p class="empty" style="margin-bottom:16px">Sin lugar con esa capacidad: ${sin.map(s=>esc(s.clientes.nombre)).join(", ")}. Subí el máximo o hablá con ellos.</p>`:"")+
+ (SOL.length?SOL.map(s=>`<div class="card"><div class="row" style="justify-content:space-between"><div><b>${esc((s.clientes.apellido+" "+s.clientes.nombre).trim())}</b> <span class="pill">${esc(s.servicios?.nombre||"")}</span>${s.notas?`<div class="sub">“${esc(s.notas)}”</div>`:""}</div><button class="t d" data-act="descartar" data-id="${s.id}">Descartar</button></div>
+ <div class="chips">${s.disponibilidad.map(k=>`<span class="chip ${k===sug[s.id]?"ok":""}">${slot(k)}${dem[k]>1?" ("+dem[k]+")":""}</span>`).join("")}</div>
+ ${sug[s.id]?`<div class="sub" style="margin:6px 0">Sugerido: ${slot(sug[s.id])}. Entre paréntesis, cuántos pueden en esa franja.</div>`:""}
+ <div class="row" style="margin-top:8px"><input type="datetime-local" data-fe="${s.id}" value="${ST.fechas[s.id]||""}"><button class="p" data-act="agendar" data-id="${s.id}">Agendar y avisar por WhatsApp</button></div></div>`).join(""):`<p class="empty">No hay solicitudes pendientes.</p>`)}
+
+/* ---------- PLANES ---------- */
+async function vPlanes(){
+ const mes=hoy().slice(0,7)+"-01",L=PL.filter(p=>p.mes===mes);
+ return head("Plan mensual",`${money(60000)} por mes · corte semanal incluido`)+
+ `<form class="f" data-f="plan">${clList()}<label>Cliente<input name="c" list="cl" required></label><div class="acts"><button class="p">Anotar en el plan de este mes</button></div></form>`+
+ `<p class="sub" style="margin-bottom:12px">Con el plan pagado, los cortes de ese cliente en el mes no se cobran ni suman dos veces a la caja.</p>`+
+ (L.length?`<div class="w"><table><tbody>`+L.map(p=>`<tr><td>${esc((p.clientes.apellido+" "+p.clientes.nombre).trim())}</td><td>${p.pagado?`<span class="pill pos">Pagado · ${p.metodo_pago}</span>`:'<span class="pill warn">Pendiente</span>'}</td>
+ <td class="nw">${p.pagado?`<button class="t d" data-act="desplan" data-id="${p.id}">Deshacer pago</button>`:`<button class="t" data-act="cobplan" data-id="${p.id}">Cobrar</button><button class="t d" data-act="delplan" data-id="${p.id}">Quitar</button>`}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">Nadie anotado este mes.</p>`)}
+
+/* ---------- REPORTES ---------- */
+async function vReportes(){
+ const[a,m]=await Promise.all([q(sb.from("atenciones").select("cliente_id,clientes(nombre,apellido)").in("estado",["listo","pagado"]).gte("fecha",ST.desde+"T00:00:00-03:00").lte("fecha",ST.hasta+"T23:59:59-03:00")),q(sb.from("movimientos_caja").select("*").gte("fecha",ST.desde).lte("fecha",ST.hasta))]);
+ const A=a?.data||[],M=m?.data||[],por={};A.forEach(x=>{const k=x.cliente_id;por[k]=por[k]||{n:(x.clientes.apellido+" "+x.clientes.nombre).trim(),c:0};por[k].c++});
+ const rank=Object.values(por).sort((x,y)=>y.c-x.c),s=(tp,ct)=>sum(M.filter(x=>x.tipo===tp&&(!ct||x.categoria===ct)),x=>+x.monto),ing=s("ingreso"),eg=s("egreso");
+ return head("Reportes","Por período y por cliente",`<div class="row"><input type="date" data-set="desde" value="${ST.desde}"><input type="date" data-set="hasta" value="${ST.hasta}"></div>`)+
+ `<div class="kpi"><div><span>Cortes realizados</span><b>${A.length}</b></div><div><span>Ingresos</span><b>${money(ing)}</b></div><div><span>Egresos</span><b>${money(eg)}</b></div><div><span>Ganancia</span><b>${money(ing-eg)}</b></div></div>
+ <p class="sub">Ingresos: cortes ${money(s("ingreso","corte"))} · planes ${money(s("ingreso","plan"))} · productos ${money(s("ingreso","producto"))}</p>
+ <h3>Cortes por cliente</h3>${rank.length?`<div class="w"><table><tbody>${rank.map(r=>`<tr><td>${esc(r.n)}</td><td class="num">${r.c}</td></tr>`).join("")}</tbody></table></div>`:`<p class="empty">Sin cortes en el período.</p>`}`}
+
+/* ---------- EVENTOS ---------- */
+const hoyOk=async(p,after)=>{if(await q(p))after?await after():await load()};
+const ACT={
+ nav:b=>{ST.tab=b.dataset.id;ST.edit=null;location.hash=ST.tab;render()},
+ out:async()=>{await sb.auth.signOut();location.reload()},
+ cx:()=>{ST.edit=null;render()},
+ copiar:b=>{navigator.clipboard.writeText(b.dataset.v);b.textContent="¡Copiado!"},
+ listo:b=>hoyOk(sb.from("atenciones").update({estado:"listo"}).eq("id",b.dataset.id),render),
+ cobrar:async b=>{const m=await pick("¿Cómo pagó?");if(m)hoyOk(sb.from("atenciones").update({estado:"pagado",metodo_pago:m}).eq("id",b.dataset.id),render)},
+ cancelar:b=>confirm("¿Cancelar este corte?")&&hoyOk(sb.from("atenciones").update({estado:"cancelado",metodo_pago:null}).eq("id",b.dataset.id),render),
+ reabrir:b=>hoyOk(sb.from("atenciones").update({estado:"pendiente",metodo_pago:null}).eq("id",b.dataset.id),render),
+ editc:b=>{ST.edit=b.dataset.id;render();scrollTo(0,0)},
+ bajac:b=>{const c=C.find(x=>x.id===b.dataset.id);hoyOk(sb.from("clientes").update({activo:!c.activo}).eq("id",c.id))},
+ delmov:b=>confirm("¿Eliminar movimiento?")&&hoyOk(sb.from("movimientos_caja").delete().eq("id",b.dataset.id),render),
+ delp:b=>confirm("¿Dar de baja este producto?")&&hoyOk(sb.from("productos").update({activo:false}).eq("id",b.dataset.id)),
+ stin:b=>{const p=PR.find(x=>x.id===b.dataset.id);dlg("Ingreso de "+esc(p.nombre),`<label>Cantidad<input name="c" type="number" min="1" value="1" required></label><label>Costo total (0 si no va a caja)<input name="m" type="number" step="any" value="0"></label><label>Pagado con<select name="md"><option>efectivo</option><option>transferencia</option></select></label>`,
+  async f=>{const m=+f.get("m");await q(sb.from("movimientos_stock").insert({producto_id:p.id,tipo:"entrada",cantidad:+f.get("c"),monto:m,metodo_pago:m>0?f.get("md"):null}));load()})},
+ stven:b=>{const p=PR.find(x=>x.id===b.dataset.id);dlg("Venta de "+esc(p.nombre),`<label>Cantidad<input name="c" type="number" min="1" max="${p.stock}" value="1" required></label><label>Total cobrado<input name="m" type="number" step="any" value="${p.precio_venta}" required></label><label>Pagó con<select name="md"><option>efectivo</option><option>transferencia</option></select></label>`,
+  async f=>{await q(sb.from("movimientos_stock").insert({producto_id:p.id,tipo:"venta",cantidad:+f.get("c"),monto:+f.get("m"),metodo_pago:f.get("md")}));load()},
+  f=>f.c.oninput=()=>f.m.value=f.c.value*p.precio_venta)},
+ cobplan:async b=>{const m=await pick("¿Cómo pagó el plan?");if(m)hoyOk(sb.from("planes").update({pagado:true,metodo_pago:m,fecha_pago:hoy()}).eq("id",b.dataset.id))},
+ desplan:b=>confirm("Se quita el pago y sale de caja. ¿Seguir?")&&hoyOk(sb.from("planes").update({pagado:false,metodo_pago:null,fecha_pago:null}).eq("id",b.dataset.id)),
+ delplan:b=>hoyOk(sb.from("planes").delete().eq("id",b.dataset.id)),
+ descartar:b=>hoyOk(sb.from("solicitudes_turno").update({estado:"descartado"}).eq("id",b.dataset.id)),
+ agendar:async b=>{const s=SOL.find(x=>x.id===b.dataset.id),v=ST.fechas[s.id];if(!v)return alert("Elegí día y hora");
+  const sv=s.servicios||S.find(x=>x.activo),plan=planDe(s.cliente_id,v);
+  const r=await q(sb.from("atenciones").insert({cliente_id:s.cliente_id,servicio_id:sv.id,fecha:v+":00-03:00",precio:plan?0:sv.precio,cubierto_por_plan:!!plan}).select().single());if(!r)return;
+  await q(sb.from("solicitudes_turno").update({estado:"agendado",atencion_id:r.data.id}).eq("id",s.id));
+  const d=new Date(v),msg=`Hola ${s.clientes.nombre}, te espero el ${d.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"})} a las ${v.slice(11,16)}. ¡Te espero!`;
+  window.open(wa(s.clientes.telefono,msg),"_blank");load()}
+};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(b&&ACT[b.dataset.act])ACT[b.dataset.act](b)});
+document.addEventListener("change",e=>{const t=e.target;if(t.dataset.set){ST[t.dataset.set]=t.type==="number"?Math.max(1,+t.value||1):t.value;if(t.dataset.set!=="q")render()}else if(t.dataset.fe)ST.fechas[t.dataset.fe]=t.value});
+document.addEventListener("input",e=>{const t=e.target;if(t.dataset.set==="q"){ST.q=t.value;const p=t.selectionStart;render().then?.(()=>{});setTimeout(()=>{const i=$("[data-set=q]");if(i){i.focus();i.setSelectionRange(p,p)}},0)}});
+const FORMS={
+ corte:async f=>{const c=cByLabel(f.get("c"));if(!c)return alert("Elegí un cliente de la lista");const s=S.find(x=>x.id===f.get("s")),fe=`${ST.dia}T${f.get("h")}:00-03:00`,plan=planDe(c.id,ST.dia);
+  if(await q(sb.from("atenciones").insert({cliente_id:c.id,servicio_id:s.id,fecha:fe,precio:plan?0:s.precio,cubierto_por_plan:!!plan})))render()},
+ cliente:async f=>{const o={nombre:f.get("n").trim(),apellido:f.get("a").trim(),telefono:f.get("t").replace(/\D/g,"")};if(o.telefono.length<8)return alert("Teléfono inválido");
+  const id=ST.edit;ST.edit=null;await hoyOk(id?sb.from("clientes").update(o).eq("id",id):sb.from("clientes").insert(o))},
+ cierre:async f=>{const c=+f.get("c");if(await q(sb.from("cierres_caja").upsert({fecha:ST.dia,efectivo_esperado:ST.ef,transferencia_esperada:ST.tr,efectivo_contado:c,diferencia:c-ST.ef,notas:f.get("n")})))render()},
+ mov:async f=>{if(await q(sb.from("movimientos_caja").insert({fecha:ST.dia,tipo:f.get("tp"),categoria:f.get("ct"),monto:+f.get("m"),metodo_pago:f.get("md"),descripcion:f.get("d")})))render()},
+ prod:async f=>hoyOk(sb.from("productos").insert({nombre:f.get("n").trim(),precio_venta:+f.get("p")||0,stock_minimo:+f.get("m")||0})),
+ plan:async f=>{const c=cByLabel(f.get("c"));if(!c)return alert("Elegí un cliente de la lista");hoyOk(sb.from("planes").insert({cliente_id:c.id,mes:hoy().slice(0,7)+"-01"}))}
+};
+document.addEventListener("submit",e=>{const h=FORMS[e.target.dataset.f];if(h){e.preventDefault();h(new FormData(e.target))}});
+</script></body></html>

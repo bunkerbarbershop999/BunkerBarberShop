@@ -63,7 +63,7 @@ async function q(p){const r=await p;if(r.error){alert("Error: "+r.error.message)
 
 const NAV=[["cortes","Cortes"],["clientes","Clientes"],["caja","Caja"],["stock","Stock"],["turnos","Turnos"],["planes","Planes"],["reportes","Reportes"]];
 const ST={tab:"cortes",dia:hoy(),cap:4,desde:new Date(Date.now()-30*864e5).toLocaleDateString("en-CA"),hasta:hoy(),q:"",edit:null,fechas:{}};
-let C=[],S=[],PR=[],PL=[],SOL=[],who="";
+let C=[],S=[],PR=[],PL=[],SOL=[],PA=[],who="";
 
 (async()=>{const{data:{session}}=await sb.auth.getSession();session?start(session):login()})();
 function login(msg){$("#side").innerHTML="";$("#v").style.cssText="margin:0;border:0;background:none";
@@ -73,15 +73,19 @@ async function start(s){const{data:ok}=await sb.rpc("es_enzo");if(!ok){await sb.
  who=s.user.email;$("#v").style.cssText="";ST.tab=location.hash.slice(1)||"cortes";await load()}
 async function load(){
  const r=await Promise.all([sb.from("clientes").select("*").order("apellido"),sb.from("servicios").select("*").order("precio"),sb.from("productos").select("*").eq("activo",true).order("nombre"),
-  sb.from("planes").select("*,clientes(nombre,apellido)"),sb.from("solicitudes_turno").select("*,clientes(*),servicios(id,nombre,precio)").eq("estado","pendiente").order("created_at")]);
+  sb.from("planes").select("*,clientes(nombre,apellido)"),sb.from("solicitudes_turno").select("*,clientes(*),servicios(id,nombre,precio)").eq("estado","pendiente").order("created_at"),sb.from("atenciones").select("id,plan_id,estado").not("plan_id","is",null)]);
  const bad=r.find(x=>x.error);if(bad)alert("Falta correr el SQL en Supabase: "+bad.error.message);
- [C,S,PR,PL,SOL]=r.map(x=>x.data||[]);render()}
+ [C,S,PR,PL,SOL,PA]=r.map(x=>x.data||[]);render()}
 async function render(){
  $("#side").innerHTML=`<div class="brand"><b>Barbería Enzo</b><span>Gestión</span></div>`+NAV.map(n=>`<a data-act="nav" data-id="${n[0]}" class="${ST.tab===n[0]?"on":""}">${n[1]}${n[0]==="turnos"&&SOL.length?`<i>${SOL.length} nuevas</i>`:""}</a>`).join("")+`<div class="who">${esc(who)}<br><button data-act="out">Salir</button></div>`;
  $("#v").innerHTML=await ({cortes:vCortes,clientes:vClientes,caja:vCaja,stock:vStock,turnos:vTurnos,planes:vPlanes,reportes:vReportes})[ST.tab]()}
 const head=(t,s,x)=>`<div class="head"><div><h1>${t}</h1><div class="sub">${s||""}</div></div>${x||""}</div>`;
 const fecha=()=>`<input type="date" data-set="dia" value="${ST.dia}" aria-label="Día">`;
-const planDe=(cid,f)=>PL.find(p=>p.cliente_id===cid&&p.pagado&&p.mes===f.slice(0,7)+"-01");
+const NPLAN=p=>p.cortes_incluidos||4;
+const usados=p=>PA.filter(a=>a.plan_id===p.id&&a.estado!=="cancelado").length;
+/* el primer corte es el que se paga con el plan; los demás son gratis */
+const gratis=p=>{const u=usados(p);return u===0?NPLAN(p)-1:Math.max(0,NPLAN(p)-u)};
+const planDe=(cid,f)=>{const p=PL.find(x=>x.cliente_id===cid&&x.mes===f.slice(0,7)+"-01");return p&&usados(p)<NPLAN(p)?p:null};
 const clList=()=>`<datalist id="cl">${C.filter(c=>c.activo).map(c=>`<option value="${esc(cl(c))}">`).join("")}</datalist>`;
 const cByLabel=v=>C.find(c=>cl(c)===v);
 const estPill=a=>`<span class="pill ${{pendiente:"warn",listo:"inf",pagado:"pos",cancelado:"neg"}[a.estado]}">${a.estado}${a.metodo_pago?" · "+a.metodo_pago:""}</span>`;
@@ -92,16 +96,22 @@ function dlg(t,fields,cb,init){const d=$("#d");d.onclick=null;d.oncancel=null;d.
 
 /* ---------- CORTES ---------- */
 async function vCortes(){
- const r=await q(sb.from("atenciones").select("*,clientes(nombre,apellido,telefono),servicios(nombre)").gte("fecha",ST.dia+"T00:00:00-03:00").lte("fecha",ST.dia+"T23:59:59-03:00").order("fecha"));
- const A=r?.data||[],act=A.filter(a=>a.estado!=="cancelado");
+ const[r,mc]=await Promise.all([q(sb.from("atenciones").select("*,clientes(nombre,apellido,telefono),servicios(nombre)").gte("fecha",ST.dia+"T00:00:00-03:00").lte("fecha",ST.dia+"T23:59:59-03:00").order("fecha")),
+  q(sb.from("movimientos_caja").select("monto").eq("fecha",ST.dia).eq("tipo","ingreso"))]);
+ const A=r?.data||[],act=A.filter(a=>a.estado!=="cancelado"),pOf=a=>a.plan_id&&PL.find(p=>p.id===a.plan_id);
+ const precio=a=>{const p=pOf(a);return p?(p.pagado?'<span class="pill pos">Plan</span>':`${money(p.precio)} <span class="pill warn">Plan sin cobrar</span>`):a.cubierto_por_plan?'<span class="pill">Plan</span>':money(a.precio)};
+ const btns=a=>{if(!["pendiente","listo"].includes(a.estado))return`<button class="t" data-act="reabrir" data-id="${a.id}">Reabrir</button>`;
+  const p=pOf(a);let x="";
+  if(a.cubierto_por_plan)x+=p&&!p.pagado?`<button class="t" data-act="cobplanc" data-id="${a.id}" data-pl="${p.id}">Cobrar plan ${money(p.precio)}</button>`:`<button class="t" data-act="listoplan" data-id="${a.id}">Listo</button>`;
+  else x+=(a.estado==="pendiente"?`<button class="t" data-act="listo" data-id="${a.id}">Listo</button>`:"")+`<button class="t" data-act="cobrar" data-id="${a.id}">Cobrar</button>`;
+  return x+`<button class="t d" data-act="cancelar" data-id="${a.id}">Cancelar</button>`};
  return head("Cortes",new Date(ST.dia+"T12:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}),fecha())+
- `<div class="kpi"><div><span>Cortes del día</span><b>${act.length}</b></div><div><span>Cobrado</span><b>${money(sum(A.filter(a=>a.estado==="pagado"&&!a.cubierto_por_plan),a=>+a.precio))}</b></div><div><span>Listos sin cobrar</span><b>${money(sum(A.filter(a=>a.estado==="listo"&&!a.cubierto_por_plan),a=>+a.precio))}</b></div></div>`+
+ `<div class="kpi"><div><span>Cortes del día</span><b>${act.length}</b></div><div><span>Ingresos del día</span><b>${money(sum(mc?.data||[],x=>+x.monto))}</b></div><div><span>Listos sin cobrar</span><b>${money(sum(A.filter(a=>a.estado==="listo"&&!a.cubierto_por_plan),a=>+a.precio))}</b></div></div>`+
  `<form class="f" data-f="corte">${clList()}<label>Cliente<input name="c" list="cl" placeholder="Buscar cliente" required></label>
  <label>Servicio<select name="s">${S.filter(s=>s.activo).map(s=>`<option value="${s.id}">${esc(s.nombre)} · ${money(s.precio)}</option>`).join("")}</select></label>
  <label>Hora<input name="h" type="time" value="09:00" required></label><div class="acts"><button class="p">Agendar corte</button></div></form>`+
- (A.length?`<div class="w"><table><thead><tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th class="num">Precio</th><th>Estado</th><th></th></tr></thead><tbody>`+A.map(a=>`<tr><td class="nw">${hh(a.fecha)}</td><td>${esc((a.clientes.apellido+" "+a.clientes.nombre).trim())}<span class="m">${a.clientes.telefono}</span></td><td>${esc(a.servicios.nombre)}</td>
- <td class="num">${a.cubierto_por_plan?'<span class="pill">Plan</span>':money(a.precio)}</td><td>${estPill(a)}</td><td class="nw">${
-  ["pendiente","listo"].includes(a.estado)?`${a.estado==="pendiente"?`<button class="t" data-act="listo" data-id="${a.id}">Listo</button>`:""}${a.cubierto_por_plan?"":`<button class="t" data-act="cobrar" data-id="${a.id}">Cobrar</button>`}<button class="t d" data-act="cancelar" data-id="${a.id}">Cancelar</button>`:`<button class="t" data-act="reabrir" data-id="${a.id}">Reabrir</button>`}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">No hay cortes para este día.</p>`)}
+ (A.length?`<div class="w"><table><thead><tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th class="num">Precio</th><th>Estado</th><th></th></tr></thead><tbody>`+A.map(a=>{const p=pOf(a);return`<tr><td class="nw">${hh(a.fecha)}</td><td>${esc((a.clientes.apellido+" "+a.clientes.nombre).trim())}<span class="m">${a.clientes.telefono}${p?` · Plan ${p.pagado?"cobrado":"sin cobrar"} · ${gratis(p)} gratis restantes`:""}</span></td><td>${esc(a.servicios.nombre)}</td>
+ <td class="num">${precio(a)}</td><td>${estPill(a)}</td><td class="nw">${btns(a)}</td></tr>`}).join("")+`</tbody></table></div>`:`<p class="empty">No hay cortes para este día.</p>`)}
 
 /* ---------- CLIENTES ---------- */
 async function vClientes(){
@@ -121,7 +131,7 @@ async function vCaja(){
  const t=(tp,md)=>sum(M.filter(x=>x.tipo===tp&&x.metodo_pago===md),x=>+x.monto),ef=t("ingreso","efectivo")-t("egreso","efectivo"),tr=t("ingreso","transferencia")-t("egreso","transferencia");
  ST.ef=ef;ST.tr=tr;
  return head("Caja","Cierre diario",fecha())+
- `<div class="kpi"><div><span>Efectivo</span><b>${money(ef)}</b></div><div><span>Transferencias</span><b>${money(tr)}</b></div><div><span>Total del día</span><b>${money(ef+tr)}</b></div><div><span>Listos sin cobrar</span><b>${money(sum(D,x=>+x.precio))}</b></div></div>`+
+ `<div class="kpi"><div><span>Efectivo</span><b>${money(ef)}</b></div><div><span>Transferencias</span><b>${money(tr)}</b></div><div><span>Total del día</span><b>${money(ef+tr)}</b></div><div><span>Listos sin cobrar</span><b>${money(sum(D,x=>+x.precio))}</b></div><div><span>Planes sin cobrar</span><b>${money(sum(PL.filter(p=>!p.pagado&&usados(p)>0),p=>+p.precio))}</b></div></div>`+
  `<h3 style="margin-top:0">Cerrar caja</h3>${cz?`<p class="sub" style="margin-bottom:12px">Cierre guardado: esperado ${money(cz.efectivo_esperado)}, contado ${money(cz.efectivo_contado)}, diferencia <b>${money(cz.diferencia)}</b>.</p>`:""}
  <form class="f" data-f="cierre"><label>Efectivo contado<input name="c" type="number" step="any" value="${cz?cz.efectivo_contado:""}" required></label><label>Notas<input name="n" value="${esc(cz?.notas)}"></label><div class="acts"><button class="p">${cz?"Actualizar cierre":"Cerrar caja"}</button></div></form>`+
  `<h3>Gasto, inversión o ingreso manual</h3><form class="f" data-f="mov"><label>Tipo<select name="tp"><option value="egreso">Egreso</option><option value="ingreso">Ingreso</option></select></label>
@@ -155,11 +165,13 @@ async function vTurnos(){
 /* ---------- PLANES ---------- */
 async function vPlanes(){
  const mes=hoy().slice(0,7)+"-01",L=PL.filter(p=>p.mes===mes);
- return head("Plan mensual",`${money(60000)} por mes · corte semanal incluido`)+
+ return head("Plan mensual",`${money(60000)} por mes · el primer corte se cobra y los otros ${NPLAN({})-1} son gratis`)+
  `<form class="f" data-f="plan">${clList()}<label>Cliente<input name="c" list="cl" required></label><div class="acts"><button class="p">Anotar en el plan de este mes</button></div></form>`+
- `<p class="sub" style="margin-bottom:12px">Con el plan pagado, los cortes de ese cliente en el mes no se cobran ni suman dos veces a la caja.</p>`+
- (L.length?`<div class="w"><table><tbody>`+L.map(p=>`<tr><td>${esc((p.clientes.apellido+" "+p.clientes.nombre).trim())}</td><td>${p.pagado?`<span class="pill pos">Pagado · ${p.metodo_pago}</span>`:'<span class="pill warn">Pendiente</span>'}</td>
- <td class="nw">${p.pagado?`<button class="t d" data-act="desplan" data-id="${p.id}">Deshacer pago</button>`:`<button class="t" data-act="cobplan" data-id="${p.id}">Cobrar</button><button class="t d" data-act="delplan" data-id="${p.id}">Quitar</button>`}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">Nadie anotado este mes.</p>`)}
+ `<p class="sub" style="margin-bottom:12px">El plan se cobra con el primer corte del mes (botón “Cobrar plan” en Cortes). Los siguientes cortes de ese cliente salen gratis hasta completar ${NPLAN({})}.</p>`+
+ (L.length?`<div class="w"><table><thead><tr><th>Cliente</th><th>Cobro</th><th class="num">Cortes usados</th><th class="num">Gratis restantes</th><th></th></tr></thead><tbody>`+L.map(p=>{const u=usados(p),g=gratis(p);return`<tr><td>${esc((p.clientes.apellido+" "+p.clientes.nombre).trim())}</td>
+ <td>${p.pagado?`<span class="pill pos">Cobrado · ${p.metodo_pago}</span>`:`<span class="pill warn">Sin cobrar</span>`}</td><td class="num">${u} de ${NPLAN(p)}</td>
+ <td class="num">${g>0?g:'<span class="pill neg">agotado</span>'}</td>
+ <td class="nw">${p.pagado?`<button class="t d" data-act="desplan" data-id="${p.id}">Deshacer cobro</button>`:`<button class="t" data-act="cobplan" data-id="${p.id}">Cobrar ${money(p.precio)}</button>${u?"":`<button class="t d" data-act="delplan" data-id="${p.id}">Quitar</button>`}`}</td></tr>`}).join("")+`</tbody></table></div>`:`<p class="empty">Nadie anotado este mes.</p>`)}
 
 /* ---------- REPORTES ---------- */
 async function vReportes(){
@@ -178,10 +190,13 @@ const ACT={
  out:async()=>{await sb.auth.signOut();location.reload()},
  cx:()=>{ST.edit=null;render()},
  copiar:b=>{navigator.clipboard.writeText(b.dataset.v);b.textContent="¡Copiado!"},
- listo:b=>hoyOk(sb.from("atenciones").update({estado:"listo"}).eq("id",b.dataset.id),render),
- cobrar:async b=>{const m=await pick("¿Cómo pagó?");if(m)hoyOk(sb.from("atenciones").update({estado:"pagado",metodo_pago:m}).eq("id",b.dataset.id),render)},
- cancelar:b=>confirm("¿Cancelar este corte?")&&hoyOk(sb.from("atenciones").update({estado:"cancelado",metodo_pago:null}).eq("id",b.dataset.id),render),
- reabrir:b=>hoyOk(sb.from("atenciones").update({estado:"pendiente",metodo_pago:null}).eq("id",b.dataset.id),render),
+ listo:b=>hoyOk(sb.from("atenciones").update({estado:"listo"}).eq("id",b.dataset.id)),
+ cobrar:async b=>{const m=await pick("¿Cómo pagó?");if(m)hoyOk(sb.from("atenciones").update({estado:"pagado",metodo_pago:m}).eq("id",b.dataset.id))},
+ listoplan:b=>hoyOk(sb.from("atenciones").update({estado:"pagado"}).eq("id",b.dataset.id)),
+ cobplanc:async b=>{const m=await pick("¿Cómo pagó el plan de $60.000?");if(!m)return;
+  if(await q(sb.from("planes").update({pagado:true,metodo_pago:m,fecha_pago:hoy()}).eq("id",b.dataset.pl)))hoyOk(sb.from("atenciones").update({estado:"pagado"}).eq("id",b.dataset.id))},
+ cancelar:b=>confirm("¿Cancelar este corte?")&&hoyOk(sb.from("atenciones").update({estado:"cancelado",metodo_pago:null}).eq("id",b.dataset.id)),
+ reabrir:b=>hoyOk(sb.from("atenciones").update({estado:"pendiente",metodo_pago:null}).eq("id",b.dataset.id)),
  editc:b=>{ST.edit=b.dataset.id;render();scrollTo(0,0)},
  bajac:b=>{const c=C.find(x=>x.id===b.dataset.id);hoyOk(sb.from("clientes").update({activo:!c.activo}).eq("id",c.id))},
  delmov:b=>confirm("¿Eliminar movimiento?")&&hoyOk(sb.from("movimientos_caja").delete().eq("id",b.dataset.id),render),
@@ -197,7 +212,7 @@ const ACT={
  descartar:b=>hoyOk(sb.from("solicitudes_turno").update({estado:"descartado"}).eq("id",b.dataset.id)),
  agendar:async b=>{const s=SOL.find(x=>x.id===b.dataset.id),v=ST.fechas[s.id];if(!v)return alert("Elegí día y hora");
   const sv=s.servicios||S.find(x=>x.activo),plan=planDe(s.cliente_id,v);
-  const r=await q(sb.from("atenciones").insert({cliente_id:s.cliente_id,servicio_id:sv.id,fecha:v+":00-03:00",precio:plan?0:sv.precio,cubierto_por_plan:!!plan}).select().single());if(!r)return;
+  const r=await q(sb.from("atenciones").insert({cliente_id:s.cliente_id,servicio_id:sv.id,fecha:v+":00-03:00",precio:plan?0:sv.precio,cubierto_por_plan:!!plan,plan_id:plan?plan.id:null}).select().single());if(!r)return;
   await q(sb.from("solicitudes_turno").update({estado:"agendado",atencion_id:r.data.id}).eq("id",s.id));
   const d=new Date(v),msg=`Hola ${s.clientes.nombre}, te espero el ${d.toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"})} a las ${v.slice(11,16)}. ¡Te espero!`;
   window.open(wa(s.clientes.telefono,msg),"_blank");load()}
@@ -207,13 +222,13 @@ document.addEventListener("change",e=>{const t=e.target;if(t.dataset.set){ST[t.d
 document.addEventListener("input",e=>{const t=e.target;if(t.dataset.set==="q"){ST.q=t.value;const p=t.selectionStart;render().then?.(()=>{});setTimeout(()=>{const i=$("[data-set=q]");if(i){i.focus();i.setSelectionRange(p,p)}},0)}});
 const FORMS={
  corte:async f=>{const c=cByLabel(f.get("c"));if(!c)return alert("Elegí un cliente de la lista");const s=S.find(x=>x.id===f.get("s")),fe=`${ST.dia}T${f.get("h")}:00-03:00`,plan=planDe(c.id,ST.dia);
-  if(await q(sb.from("atenciones").insert({cliente_id:c.id,servicio_id:s.id,fecha:fe,precio:plan?0:s.precio,cubierto_por_plan:!!plan})))render()},
+  if(await q(sb.from("atenciones").insert({cliente_id:c.id,servicio_id:s.id,fecha:fe,precio:plan?0:s.precio,cubierto_por_plan:!!plan,plan_id:plan?plan.id:null})))load()},
  cliente:async f=>{const o={nombre:f.get("n").trim(),apellido:f.get("a").trim(),telefono:f.get("t").replace(/\D/g,"")};if(o.telefono.length<8)return alert("Teléfono inválido");
   const id=ST.edit;ST.edit=null;await hoyOk(id?sb.from("clientes").update(o).eq("id",id):sb.from("clientes").insert(o))},
  cierre:async f=>{const c=+f.get("c");if(await q(sb.from("cierres_caja").upsert({fecha:ST.dia,efectivo_esperado:ST.ef,transferencia_esperada:ST.tr,efectivo_contado:c,diferencia:c-ST.ef,notas:f.get("n")})))render()},
  mov:async f=>{if(await q(sb.from("movimientos_caja").insert({fecha:ST.dia,tipo:f.get("tp"),categoria:f.get("ct"),monto:+f.get("m"),metodo_pago:f.get("md"),descripcion:f.get("d")})))render()},
  prod:async f=>hoyOk(sb.from("productos").insert({nombre:f.get("n").trim(),precio_venta:+f.get("p")||0,stock_minimo:+f.get("m")||0})),
- plan:async f=>{const c=cByLabel(f.get("c"));if(!c)return alert("Elegí un cliente de la lista");hoyOk(sb.from("planes").insert({cliente_id:c.id,mes:hoy().slice(0,7)+"-01"}))}
+ plan:async f=>{const c=cByLabel(f.get("c"));if(!c)return alert("Elegí un cliente de la lista");if(PL.some(p=>p.cliente_id===c.id&&p.mes===hoy().slice(0,7)+"-01"))return alert("Ese cliente ya está en el plan de este mes");hoyOk(sb.from("planes").insert({cliente_id:c.id,mes:hoy().slice(0,7)+"-01"}))}
 };
 document.addEventListener("submit",e=>{const h=FORMS[e.target.dataset.f];if(h){e.preventDefault();h(new FormData(e.target))}});
 </script></body></html>

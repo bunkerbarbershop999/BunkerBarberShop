@@ -40,6 +40,7 @@ td{padding:6px 10px;min-height:48px;border-top:1px solid var(--rule);vertical-al
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.chip{font-size:12px;background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:0 6px}.chip.ok{background:var(--accent);color:#fff;border-color:var(--accent)}
 .card{border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px}
 .login{max-width:340px;margin:12vh auto;display:grid;gap:12px}.login b{font:600 34px/1 "Bricolage Grotesque",sans-serif;color:var(--accent)}
+.seg{display:inline-flex}.seg button{border-radius:0;margin-left:-1px}.seg button:first-child{border-radius:6px 0 0 6px;margin:0}.seg button:last-child{border-radius:0 6px 6px 0}.seg button.on{background:var(--active);font-weight:500}
 @media(max-width:760px){body{display:block}aside{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:8px}.brand,.who{display:none}aside a{white-space:nowrap;flex:none}.sheet{margin:0;border-radius:0;border:0;padding:16px}}
 </style></head><body>
 <aside id="side"></aside><main class="sheet" id="v"></main><dialog id="d"></dialog>
@@ -60,11 +61,12 @@ const wa=(t,m)=>`https://wa.me/${t.startsWith("54")?t:"549"+t.replace(/^0/,"")}?
 const nz=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 const sel=(l,v)=>l.map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("");
 const medios=v=>["efectivo","transferencia"].map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")+`<option value="" ${v?"":"selected"}>sin caja</option>`;
+const fd=i=>new Date(i).toLocaleDateString("es-AR",{day:"numeric",month:"numeric",timeZone:"America/Argentina/Cordoba"});
 const cl=c=>(`${c.apellido} ${c.nombre}`).trim()+" · "+c.telefono;
 async function q(p){const r=await p;if(r.error){alert("Error: "+r.error.message);return null}return r}
 
 const NAV=[["cortes","Cortes"],["clientes","Clientes"],["caja","Caja"],["stock","Stock"],["turnos","Turnos"],["planes","Planes"],["reportes","Reportes"]];
-const ST={tab:"cortes",dia:hoy(),cap:4,desde:new Date(Date.now()-30*864e5).toLocaleDateString("en-CA"),hasta:hoy(),q:"",edit:null,fechas:{}};
+const ST={tab:"cortes",ctab:"cli",dia:hoy(),cap:4,desde:new Date(Date.now()-30*864e5).toLocaleDateString("en-CA"),hasta:hoy(),q:"",edit:null,fechas:{}};
 let C=[],S=[],PR=[],PL=[],SOL=[],PA=[],who="";
 
 (async()=>{const{data:{session}}=await sb.auth.getSession();session?start(session):login()})();
@@ -100,24 +102,37 @@ function dlg(t,fields,cb,init){const d=$("#d");d.onclick=null;d.oncancel=null;d.
 async function vCortes(){
  const[r,mc]=await Promise.all([q(sb.from("atenciones").select("*,clientes(nombre,apellido,telefono),servicios(nombre)").gte("fecha",ST.dia+"T00:00:00-03:00").lte("fecha",ST.dia+"T23:59:59-03:00").order("fecha")),
   q(sb.from("movimientos_caja").select("monto").eq("fecha",ST.dia).eq("tipo","ingreso"))]);
- const A=r?.data||[],act=A.filter(a=>a.estado!=="cancelado"),pOf=a=>a.plan_id&&PL.find(p=>p.id===a.plan_id);
+ const A=r?.data||[];ST.A=A;const act=A.filter(a=>a.estado!=="cancelado"),pOf=a=>a.plan_id&&PL.find(p=>p.id===a.plan_id);
  const precio=a=>{const p=pOf(a);return p?(p.pagado?'<span class="pill pos">Plan</span>':`${money(p.precio)} <span class="pill warn">Plan sin cobrar</span>`):a.cubierto_por_plan?'<span class="pill">Plan</span>':money(a.precio)};
  const ed=a=>a.cubierto_por_plan||a.estado==="cancelado"?"":`<button class="t" data-act="editat" data-id="${a.id}">Editar</button>`;
  const btns=a=>{if(!["pendiente","listo"].includes(a.estado))return ed(a)+`<button class="t" data-act="reabrir" data-id="${a.id}">Reabrir</button>`;
   const p=pOf(a);let x="";
   if(a.cubierto_por_plan)x+=p&&!p.pagado?`<button class="t" data-act="cobplanc" data-id="${a.id}" data-pl="${p.id}">Cobrar plan ${money(p.precio)}</button>`:`<button class="t" data-act="listoplan" data-id="${a.id}">Listo</button>`;
   else x+=(a.estado==="pendiente"?`<button class="t" data-act="listo" data-id="${a.id}">Listo</button>`:"")+`<button class="t" data-act="cobrar" data-id="${a.id}">Cobrar</button>`;
-  return x+ed(a)+`<button class="t d" data-act="cancelar" data-id="${a.id}">Cancelar</button>`};
- return head("Cortes",new Date(ST.dia+"T12:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}),fecha())+
+  return x+(a.estado==="pendiente"?`<button class="t" data-act="remcorte" data-id="${a.id}">Recordar</button>`:"")+ed(a)+`<button class="t d" data-act="cancelar" data-id="${a.id}">Cancelar</button>`};
+ return head("Cortes",new Date(ST.dia+"T12:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}),`<div class="row"><button data-act="dia" data-id="0">Hoy</button><button data-act="dia" data-id="1">Mañana</button>${fecha()}</div>`)+
  `<div class="kpi"><div><span>Cortes del día</span><b>${act.length}</b></div><div><span>Ingresos del día</span><b>${money(sum(mc?.data||[],x=>+x.monto))}</b></div><div><span>Listos sin cobrar</span><b>${money(sum(A.filter(a=>a.estado==="listo"&&!a.cubierto_por_plan),a=>+a.precio))}</b></div></div>`+
  `<form class="f" data-f="corte">${clList()}<label>Cliente<input name="c" list="cl" placeholder="Buscar cliente" required></label>
  <label>Servicio<select name="s">${S.filter(s=>s.activo).map(s=>`<option value="${s.id}">${esc(s.nombre)} · ${money(s.precio)}</option>`).join("")}</select></label>
  <label>Hora<input name="h" type="time" value="09:00" required></label><div class="acts"><button class="p">Agendar corte</button></div></form>`+
  (A.length?`<div class="w"><table><thead><tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th class="num">Precio</th><th>Estado</th><th></th></tr></thead><tbody>`+A.map(a=>{const p=pOf(a);return`<tr><td class="nw">${hh(a.fecha)}</td><td>${esc((a.clientes.apellido+" "+a.clientes.nombre).trim())}<span class="m">${a.clientes.telefono}${p?` · Plan ${p.pagado?"cobrado":"sin cobrar"} · ${gratis(p)} gratis restantes`:""}</span></td><td>${esc(a.servicios.nombre)}</td>
- <td class="num">${precio(a)}</td><td>${estPill(a)}</td><td class="nw">${btns(a)}</td></tr>`}).join("")+`</tbody></table></div>`:`<p class="empty">No hay cortes para este día.</p>`)}
+ <td class="num">${precio(a)}</td><td>${estPill(a)}${a.recordado_at?`<span class="m">Recordado ${fd(a.recordado_at)} ${hh(a.recordado_at)}</span>`:""}</td><td class="nw">${btns(a)}</td></tr>`}).join("")+`</tbody></table></div>`:`<p class="empty">No hay cortes para este día.</p>`)}
 
 /* ---------- CLIENTES ---------- */
 async function vClientes(){
+ const dr=await q(sb.from("atenciones").select("id,cliente_id,fecha,precio,servicios(nombre)").eq("estado","listo").eq("cubierto_por_plan",false).order("fecha")),m={};
+ (dr?.data||[]).forEach(a=>{const c=C.find(x=>x.id===a.cliente_id);if(c)(m[c.id]=m[c.id]||{c,cortes:[],plan:null}).cortes.push(a)});
+ PL.filter(p=>!p.pagado&&usados(p)>0).forEach(p=>{const c=C.find(x=>x.id===p.cliente_id);if(c)(m[c.id]=m[c.id]||{c,cortes:[],plan:null}).plan=p});
+ const D=Object.values(m).map(d=>({...d,total:sum(d.cortes,x=>+x.precio)+(d.plan?+d.plan.precio:0)})).sort((a,b)=>b.total-a.total);ST.DEUD=D;
+ return `<div style="margin-bottom:16px" class="seg"><button data-act="ctab" data-id="cli" class="${ST.ctab==="cli"?"on":""}">Clientes</button><button data-act="ctab" data-id="deu" class="${ST.ctab==="deu"?"on":""}">Deudores${D.length?" ("+D.length+")":""}</button></div>`+(ST.ctab==="deu"?vDeudores(D):await vLista())}
+function vDeudores(D){
+ const dias=d=>d.cortes.length?Math.floor((Date.now()-Math.min(...d.cortes.map(x=>new Date(x.fecha).getTime())))/864e5):null;
+ return head("Deudores",D.length?`${D.length} cliente${D.length>1?"s":""} con cobros pendientes`:"Cortes listos sin cobrar y planes sin pagar")+
+ `<div class="kpi"><div><span>Total adeudado</span><b>${money(sum(D,d=>d.total))}</b></div><div><span>Deudores</span><b>${D.length}</b></div></div>`+
+ (D.length?`<div class="w"><table><thead><tr><th>Cliente</th><th>Detalle</th><th class="num">Debe</th><th class="num">Antigüedad</th><th>Último aviso</th><th></th></tr></thead><tbody>`+D.map(d=>`<tr><td>${esc((d.c.apellido+" "+d.c.nombre).trim())}<span class="m">${d.c.telefono}</span></td>
+ <td>${d.cortes.map(x=>`${fd(x.fecha)} · ${esc(x.servicios.nombre)} ${money(x.precio)}`).join("<br>")}${d.plan?`${d.cortes.length?"<br>":""}Plan mensual ${money(d.plan.precio)}`:""}</td><td class="num">${money(d.total)}</td><td class="num">${dias(d)!=null?dias(d)+" d":"—"}</td>
+ <td>${d.c.ultimo_aviso?fd(d.c.ultimo_aviso):"—"}</td><td class="nw"><button class="t" data-act="recordar" data-id="${d.c.id}">Recordar por WhatsApp</button><button class="t" data-act="cobdeuda" data-id="${d.c.id}">Cobrar</button></td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">Nadie debe nada.</p>`)}
+async function vLista(){
  const e=C.find(c=>c.id===ST.edit)||{},L=C.filter(c=>!ST.q||nz(cl(c)).includes(nz(ST.q)));
  const cnt={};(await q(sb.from("atenciones").select("cliente_id").in("estado",["listo","pagado"])))?.data?.forEach(a=>cnt[a.cliente_id]=(cnt[a.cliente_id]||0)+1);
  return head("Clientes",`${C.filter(c=>c.activo).length} activos`)+
@@ -219,6 +234,18 @@ const ACT={
   async f=>{await q(sb.from("productos").update({nombre:f.get("n").trim(),precio_venta:+f.get("p")||0,stock_minimo:+f.get("m")||0}).eq("id",p.id));load()})},
  ajus:b=>{const p=PR.find(x=>x.id===b.dataset.id);dlg("Ajustar stock de "+esc(p.nombre),`<label>Stock real que hay ahora<input name="s" type="number" min="0" value="${p.stock}" required></label>`,
   async f=>{const d=+f.get("s")-p.stock;if(d)await q(sb.from("movimientos_stock").insert({producto_id:p.id,tipo:"ajuste",cantidad:d,monto:0}));load()})},
+ ctab:b=>{ST.ctab=b.dataset.id;render()},
+ recordar:async b=>{const d=ST.DEUD.find(x=>x.c.id===b.dataset.id),p=[];
+  if(d.cortes.length)p.push(d.cortes.length===1?`el corte del ${fd(d.cortes[0].fecha)}`:`${d.cortes.length} cortes (${d.cortes.map(x=>fd(x.fecha)).join(", ")})`);if(d.plan)p.push("el plan mensual");
+  window.open(wa(d.c.telefono,`Hola ${d.c.nombre}, ¿cómo andás? Te escribo de la barbería para recordarte que tenés pendiente de pago ${p.join(" y ")}, por un total de ${money(d.total)}. Cuando puedas avisame por acá. ¡Gracias!`),"_blank");await q(sb.from("clientes").update({ultimo_aviso:new Date().toISOString()}).eq("id",d.c.id));load()},
+ cobdeuda:async b=>{const d=ST.DEUD.find(x=>x.c.id===b.dataset.id),m=await pick(`Cobrar ${money(d.total)} a ${esc(d.c.nombre)}`);if(!m)return;
+  if(d.cortes.length&&!await q(sb.from("atenciones").update({estado:"pagado",metodo_pago:m}).in("id",d.cortes.map(x=>x.id))))return;
+  if(d.plan)await q(sb.from("planes").update({pagado:true,metodo_pago:m,fecha_pago:hoy()}).eq("id",d.plan.id));load()},
+ dia:b=>{ST.dia=new Date(Date.now()+ +b.dataset.id*864e5).toLocaleDateString("en-CA",{timeZone:"America/Argentina/Cordoba"});render()},
+ remcorte:async b=>{const a=ST.A.find(x=>x.id===b.dataset.id),TZ="America/Argentina/Cordoba",ms=new Date(Date.now()+864e5).toLocaleDateString("en-CA",{timeZone:TZ}),
+  cuando=ST.dia===hoy()?"hoy":ST.dia===ms?"mañana":"el "+new Date(a.fecha).toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long",timeZone:TZ});
+  window.open(wa(a.clientes.telefono,`Hola ${a.clientes.nombre}, te recuerdo tu turno ${cuando} a las ${hh(a.fecha)}. Si no podés venir avisame por acá así reacomodo los horarios. ¡Gracias!`),"_blank");
+  await q(sb.from("atenciones").update({recordado_at:new Date().toISOString()}).eq("id",a.id));load()},
  listoplan:b=>hoyOk(sb.from("atenciones").update({estado:"pagado"}).eq("id",b.dataset.id)),
  cobplanc:async b=>{const m=await pick("¿Cómo pagó el plan de $60.000?");if(!m)return;
   if(await q(sb.from("planes").update({pagado:true,metodo_pago:m,fecha_pago:hoy()}).eq("id",b.dataset.pl)))hoyOk(sb.from("atenciones").update({estado:"pagado"}).eq("id",b.dataset.id))},

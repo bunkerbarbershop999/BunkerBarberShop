@@ -154,7 +154,7 @@ create trigger stock_mov after insert on movimientos_stock
 -- ============ SEGURIDAD (RLS) ============
 -- Solo el email que cargues en "admins" puede leer y escribir. (Igual que es_socio en Royal Essence)
 create table admins (email text primary key);
-insert into admins values ('CAMBIAR-POR-EL-EMAIL-DE-ENZO@gmail.com');   -- <<< EDITAR ANTES DE EJECUTAR
+insert into admins values ('enzolorenzino@icloud.com');   -- <<< EDITAR ANTES DE EJECUTAR
 alter table admins enable row level security;                            -- sin políticas: nadie la lee directo
 
 create or replace function es_enzo() returns boolean

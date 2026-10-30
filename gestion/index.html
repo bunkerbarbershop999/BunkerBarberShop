@@ -58,6 +58,8 @@ const FRAN=[["man","Mañana"],["tar","Tarde"],["noc","Noche"]];
 const slot=s=>{const[d,f]=s.split("-");return DIAS.find(x=>x[0]===d)[1]+" "+FRAN.find(x=>x[0]===f)[1].toLowerCase()};
 const wa=(t,m)=>`https://wa.me/${t.startsWith("54")?t:"549"+t.replace(/^0/,"")}?text=${encodeURIComponent(m)}`;
 const nz=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const sel=(l,v)=>l.map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("");
+const medios=v=>["efectivo","transferencia"].map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")+`<option value="" ${v?"":"selected"}>sin caja</option>`;
 const cl=c=>(`${c.apellido} ${c.nombre}`).trim()+" · "+c.telefono;
 async function q(p){const r=await p;if(r.error){alert("Error: "+r.error.message);return null}return r}
 
@@ -100,11 +102,12 @@ async function vCortes(){
   q(sb.from("movimientos_caja").select("monto").eq("fecha",ST.dia).eq("tipo","ingreso"))]);
  const A=r?.data||[],act=A.filter(a=>a.estado!=="cancelado"),pOf=a=>a.plan_id&&PL.find(p=>p.id===a.plan_id);
  const precio=a=>{const p=pOf(a);return p?(p.pagado?'<span class="pill pos">Plan</span>':`${money(p.precio)} <span class="pill warn">Plan sin cobrar</span>`):a.cubierto_por_plan?'<span class="pill">Plan</span>':money(a.precio)};
- const btns=a=>{if(!["pendiente","listo"].includes(a.estado))return`<button class="t" data-act="reabrir" data-id="${a.id}">Reabrir</button>`;
+ const ed=a=>a.cubierto_por_plan||a.estado==="cancelado"?"":`<button class="t" data-act="editat" data-id="${a.id}">Editar</button>`;
+ const btns=a=>{if(!["pendiente","listo"].includes(a.estado))return ed(a)+`<button class="t" data-act="reabrir" data-id="${a.id}">Reabrir</button>`;
   const p=pOf(a);let x="";
   if(a.cubierto_por_plan)x+=p&&!p.pagado?`<button class="t" data-act="cobplanc" data-id="${a.id}" data-pl="${p.id}">Cobrar plan ${money(p.precio)}</button>`:`<button class="t" data-act="listoplan" data-id="${a.id}">Listo</button>`;
   else x+=(a.estado==="pendiente"?`<button class="t" data-act="listo" data-id="${a.id}">Listo</button>`:"")+`<button class="t" data-act="cobrar" data-id="${a.id}">Cobrar</button>`;
-  return x+`<button class="t d" data-act="cancelar" data-id="${a.id}">Cancelar</button>`};
+  return x+ed(a)+`<button class="t d" data-act="cancelar" data-id="${a.id}">Cancelar</button>`};
  return head("Cortes",new Date(ST.dia+"T12:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"}),fecha())+
  `<div class="kpi"><div><span>Cortes del día</span><b>${act.length}</b></div><div><span>Ingresos del día</span><b>${money(sum(mc?.data||[],x=>+x.monto))}</b></div><div><span>Listos sin cobrar</span><b>${money(sum(A.filter(a=>a.estado==="listo"&&!a.cubierto_por_plan),a=>+a.precio))}</b></div></div>`+
  `<form class="f" data-f="corte">${clList()}<label>Cliente<input name="c" list="cl" placeholder="Buscar cliente" required></label>
@@ -125,11 +128,13 @@ async function vClientes(){
  <td class="nw"><button class="t" data-act="editc" data-id="${c.id}">Editar</button><button class="t ${c.activo?"d":""}" data-act="bajac" data-id="${c.id}">${c.activo?"Dar de baja":"Reactivar"}</button></td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">No hay clientes.</p>`)}
 
 /* ---------- CAJA ---------- */
+const movAcc=x=>{const B=(a,i,l,d)=>`<button class="t ${d?"d":""}" data-act="${a}" data-id="${i}">${l}</button>`;
+ return x.stock_id?B("editsm",x.stock_id,"Editar")+B("delsm",x.stock_id,"Eliminar",1):x.atencion_id?B("editat",x.atencion_id,"Editar")+B("anulat",x.atencion_id,"Anular cobro",1):x.plan_id?B("editpl",x.plan_id,"Editar")+B("anulpl",x.plan_id,"Anular cobro",1):B("editmov",x.id,"Editar")+B("delmov",x.id,"Eliminar",1)};
 async function vCaja(){
  const[m,ci,de]=await Promise.all([q(sb.from("movimientos_caja").select("*").eq("fecha",ST.dia).order("id")),q(sb.from("cierres_caja").select("*").eq("fecha",ST.dia)),q(sb.from("atenciones").select("precio,clientes(nombre,apellido)").eq("estado","listo").eq("cubierto_por_plan",false))]);
  const M=m?.data||[],cz=ci?.data?.[0],D=de?.data||[];
  const t=(tp,md)=>sum(M.filter(x=>x.tipo===tp&&x.metodo_pago===md),x=>+x.monto),ef=t("ingreso","efectivo")-t("egreso","efectivo"),tr=t("ingreso","transferencia")-t("egreso","transferencia");
- ST.ef=ef;ST.tr=tr;
+ ST.ef=ef;ST.tr=tr;ST.M=M;
  return head("Caja","Cierre diario",fecha())+
  `<div class="kpi"><div><span>Efectivo</span><b>${money(ef)}</b></div><div><span>Transferencias</span><b>${money(tr)}</b></div><div><span>Total del día</span><b>${money(ef+tr)}</b></div><div><span>Listos sin cobrar</span><b>${money(sum(D,x=>+x.precio))}</b></div><div><span>Planes sin cobrar</span><b>${money(sum(PL.filter(p=>!p.pagado&&usados(p)>0),p=>+p.precio))}</b></div></div>`+
  `<h3 style="margin-top:0">Cerrar caja</h3>${cz?`<p class="sub" style="margin-bottom:12px">Cierre guardado: esperado ${money(cz.efectivo_esperado)}, contado ${money(cz.efectivo_contado)}, diferencia <b>${money(cz.diferencia)}</b>.</p>`:""}
@@ -138,14 +143,18 @@ async function vCaja(){
  <label>Categoría<select name="ct"><option>gasto</option><option>inversion</option><option>maquina</option><option>otro</option></select></label><label>Monto<input name="m" type="number" step="any" required></label>
  <label>Medio<select name="md"><option>efectivo</option><option>transferencia</option></select></label><label>Descripción<input name="d"></label><div class="acts"><button class="p">Agregar</button></div></form>`+
  `<h3>Movimientos del día</h3>`+(M.length?`<div class="w"><table><tbody>`+M.map(x=>`<tr><td>${x.categoria}<span class="m">${esc(x.descripcion)}</span></td><td>${x.metodo_pago}</td><td class="num" style="color:var(--${x.tipo==="egreso"?"negative":"positive"})">${x.tipo==="egreso"?"−":"+"}${money(x.monto)}</td>
- <td>${x.atencion_id||x.plan_id||x.stock_id?"":`<button class="t d" data-act="delmov" data-id="${x.id}">Eliminar</button>`}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">Sin movimientos.</p>`)}
+ <td class="nw">${movAcc(x)}</td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">Sin movimientos.</p>`)}
 
 /* ---------- STOCK ---------- */
 async function vStock(){
- return head("Stock","Productos y ventas")+
+ const h=await q(sb.from("movimientos_stock").select("*,productos(nombre)").order("fecha",{ascending:false}).limit(40)),H=h?.data||[];
+ return head("Stock","Productos, ventas y correcciones")+
  `<form class="f" data-f="prod"><label>Producto<input name="n" placeholder="Cera, polvo…" required></label><label>Precio de venta<input name="p" type="number" step="any" value="0"></label><label>Stock mínimo<input name="m" type="number" value="2"></label><div class="acts"><button class="p">Agregar producto</button></div></form>`+
  (PR.length?`<div class="w"><table><thead><tr><th>Producto</th><th class="num">Precio</th><th class="num">Stock</th><th></th></tr></thead><tbody>`+PR.map(p=>`<tr><td>${esc(p.nombre)}</td><td class="num">${money(p.precio_venta)}</td><td class="num">${p.stock<=p.stock_minimo?`<span class="pill neg">${p.stock} · poco</span>`:p.stock}</td>
- <td class="nw"><button class="t" data-act="stin" data-id="${p.id}">Ingreso</button><button class="t" data-act="stven" data-id="${p.id}">Vender</button><button class="t d" data-act="delp" data-id="${p.id}">Baja</button></td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">Todavía no cargaste productos.</p>`)}
+ <td class="nw"><button class="t" data-act="stin" data-id="${p.id}">Ingreso</button><button class="t" data-act="stven" data-id="${p.id}">Vender</button><button class="t" data-act="ajus" data-id="${p.id}">Ajustar</button><button class="t" data-act="editp" data-id="${p.id}">Editar</button><button class="t d" data-act="delp" data-id="${p.id}">Baja</button></td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">Todavía no cargaste productos.</p>`)+
+ `<h3>Últimos movimientos</h3><p class="sub" style="margin-bottom:12px">Si te equivocaste en una compra o venta, editala o eliminala acá: se corrige el stock y la caja automáticamente.</p>`+
+ (H.length?`<div class="w"><table><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th class="num">Cant.</th><th class="num">Monto</th><th>Medio</th><th></th></tr></thead><tbody>`+H.map(m=>`<tr><td class="nw">${m.fecha}</td><td>${esc(m.productos?.nombre)}</td><td><span class="pill ${m.tipo==="venta"?"pos":m.tipo==="entrada"?"inf":""}">${m.tipo}</span></td><td class="num">${m.cantidad}</td><td class="num">${m.tipo==="ajuste"?"—":money(m.monto)}</td><td>${m.metodo_pago||"—"}</td>
+ <td class="nw"><button class="t" data-act="editsm" data-id="${m.id}">Editar</button><button class="t d" data-act="delsm" data-id="${m.id}">Eliminar</button></td></tr>`).join("")+`</tbody></table></div>`:`<p class="empty">Sin movimientos.</p>`)}
 
 /* ---------- TURNOS ---------- */
 function sugerir(sols,cap){const cupo={},res={},dem={};sols.forEach(s=>s.disponibilidad.forEach(k=>dem[k]=(dem[k]||0)+1));
@@ -192,6 +201,24 @@ const ACT={
  copiar:b=>{navigator.clipboard.writeText(b.dataset.v);b.textContent="¡Copiado!"},
  listo:b=>hoyOk(sb.from("atenciones").update({estado:"listo"}).eq("id",b.dataset.id)),
  cobrar:async b=>{const m=await pick("¿Cómo pagó?");if(m)hoyOk(sb.from("atenciones").update({estado:"pagado",metodo_pago:m}).eq("id",b.dataset.id))},
+ editmov:b=>{const x=ST.M.find(m=>m.id===b.dataset.id),cats=["gasto","inversion","maquina","otro"];if(!cats.includes(x.categoria))cats.push(x.categoria);
+  dlg("Editar movimiento",`<label>Fecha<input name="fe" type="date" value="${x.fecha}" required></label><label>Tipo<select name="tp">${sel(["egreso","ingreso"],x.tipo)}</select></label><label>Categoría<select name="ct">${sel(cats,x.categoria)}</select></label><label>Monto<input name="m" type="number" step="any" value="${x.monto}" required></label><label>Medio<select name="md">${sel(["efectivo","transferencia"],x.metodo_pago)}</select></label><label>Descripción<input name="d" value="${esc(x.descripcion)}"></label>`,
+  async f=>{await q(sb.from("movimientos_caja").update({fecha:f.get("fe"),tipo:f.get("tp"),categoria:f.get("ct"),monto:+f.get("m"),metodo_pago:f.get("md"),descripcion:f.get("d")}).eq("id",x.id));load()})},
+ editsm:async b=>{const r=await q(sb.from("movimientos_stock").select("*,productos(nombre)").eq("id",b.dataset.id).single());if(!r)return;const m=r.data,aj=m.tipo==="ajuste";
+  dlg(`Editar ${m.tipo} · ${esc(m.productos.nombre)}`,`<label>Cantidad<input name="c" type="number" ${aj?"":'min="1"'} value="${m.cantidad}" required></label>`+(aj?"":`<label>${m.tipo==="venta"?"Total cobrado":"Costo total (0 si no va a caja)"}<input name="m" type="number" step="any" value="${m.monto}" required></label><label>Medio<select name="md">${medios(m.metodo_pago)}</select></label>`)+`<label>Fecha<input name="fe" type="date" value="${m.fecha}" required></label>`,
+  async f=>{const o={cantidad:+f.get("c"),fecha:f.get("fe")};if(!aj){o.monto=+f.get("m");o.metodo_pago=f.get("md")||null}await q(sb.from("movimientos_stock").update(o).eq("id",m.id));load()})},
+ delsm:b=>confirm("Se elimina el movimiento, se revierte el stock y se saca de la caja. ¿Seguir?")&&hoyOk(sb.from("movimientos_stock").delete().eq("id",b.dataset.id)),
+ editat:async b=>{const r=await q(sb.from("atenciones").select("*,clientes(nombre)").eq("id",b.dataset.id).single());if(!r)return;const a=r.data;
+  dlg("Editar corte · "+esc(a.clientes.nombre),`<label>Precio<input name="p" type="number" step="any" value="${a.precio}" required></label>`+(a.estado==="pagado"?`<label>Medio de pago<select name="md">${sel(["efectivo","transferencia"],a.metodo_pago)}</select></label>`:""),
+  async f=>{const o={precio:+f.get("p")};if(a.estado==="pagado")o.metodo_pago=f.get("md");await q(sb.from("atenciones").update(o).eq("id",a.id));load()})},
+ anulat:b=>confirm("Se anula el cobro y el corte vuelve a pendiente. ¿Seguir?")&&hoyOk(sb.from("atenciones").update({estado:"pendiente",metodo_pago:null}).eq("id",b.dataset.id)),
+ editpl:b=>{const p=PL.find(x=>x.id===b.dataset.id);dlg("Editar cobro del plan",`<label>Monto<input name="p" type="number" step="any" value="${p.precio}" required></label><label>Medio<select name="md">${sel(["efectivo","transferencia"],p.metodo_pago)}</select></label><label>Fecha de cobro<input name="fe" type="date" value="${p.fecha_pago||hoy()}" required></label>`,
+  async f=>{await q(sb.from("planes").update({precio:+f.get("p"),metodo_pago:f.get("md"),fecha_pago:f.get("fe")}).eq("id",p.id));load()})},
+ anulpl:b=>confirm("Se anula el cobro del plan y sale de caja. ¿Seguir?")&&hoyOk(sb.from("planes").update({pagado:false,metodo_pago:null,fecha_pago:null}).eq("id",b.dataset.id)),
+ editp:b=>{const p=PR.find(x=>x.id===b.dataset.id);dlg("Editar producto",`<label>Nombre<input name="n" value="${esc(p.nombre)}" required></label><label>Precio de venta<input name="p" type="number" step="any" value="${p.precio_venta}"></label><label>Stock mínimo<input name="m" type="number" value="${p.stock_minimo}"></label>`,
+  async f=>{await q(sb.from("productos").update({nombre:f.get("n").trim(),precio_venta:+f.get("p")||0,stock_minimo:+f.get("m")||0}).eq("id",p.id));load()})},
+ ajus:b=>{const p=PR.find(x=>x.id===b.dataset.id);dlg("Ajustar stock de "+esc(p.nombre),`<label>Stock real que hay ahora<input name="s" type="number" min="0" value="${p.stock}" required></label>`,
+  async f=>{const d=+f.get("s")-p.stock;if(d)await q(sb.from("movimientos_stock").insert({producto_id:p.id,tipo:"ajuste",cantidad:d,monto:0}));load()})},
  listoplan:b=>hoyOk(sb.from("atenciones").update({estado:"pagado"}).eq("id",b.dataset.id)),
  cobplanc:async b=>{const m=await pick("¿Cómo pagó el plan de $60.000?");if(!m)return;
   if(await q(sb.from("planes").update({pagado:true,metodo_pago:m,fecha_pago:hoy()}).eq("id",b.dataset.pl)))hoyOk(sb.from("atenciones").update({estado:"pagado"}).eq("id",b.dataset.id))},

@@ -26,6 +26,21 @@ label{display:flex;flex-direction:column;gap:6px;font-weight:500}input,select,te
 .g{display:grid;grid-template-columns:64px repeat(3,1fr);gap:6px;align-items:center}.g span{color:var(--muted);font-size:12px;text-align:center}.g b{font-weight:500}
 .g button{height:44px}.g button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 a.wa{display:flex;align-items:center;justify-content:center;height:44px;border-radius:6px;background:var(--text);color:#fff;text-decoration:none;font-weight:500}#err{color:var(--negative);font-weight:500}.big{height:44px}
+
+/* ---- Diseño oscuro con imagen de fondo ---- */
+:root{--surface:rgba(255,255,255,.07);--raised:rgba(255,255,255,.14);--text:#f3f3f4;--muted:#aeb2b8;--control:rgba(255,255,255,.3);--border:rgba(255,255,255,.14);--accent:#d0343c}
+html{background:#0b0b0c}
+body{padding:20px clamp(20px,8vw,44px) 56px;background:transparent;color:var(--text)}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:#0b0b0c url(fondo.jpg) center/cover no-repeat}
+@media(min-width:800px){body::before{background-size:auto 100%}}
+.box{background:rgba(9,9,10,.62);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.box h1{color:#fff;text-transform:uppercase;letter-spacing:.03em}
+.brand{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:-8px}
+input,select,textarea{color-scheme:dark}select option{background:#18181a;color:#f3f3f4}
+input::placeholder,textarea::placeholder{color:#82868c}
+button.p,a.wa{background:var(--accent);color:#fff;border-color:var(--accent)}button.p:hover{background:#e0424a}
+.g button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#err{color:#ff7b7b}
 </style></head><body>
 <div class="box" id="b"></div>
 <script src="../config.js"></script>
@@ -39,7 +54,7 @@ let S=[],sel=new Set();
 const DF={lun:"Lunes",mar:"Martes",mie:"Miércoles",jue:"Jueves",vie:"Viernes",sab:"Sábado"},FF={man:"mañana",tar:"tarde",noc:"noche"};
 (async()=>{const{data}=await sb.from("servicios").select("*").order("precio");S=data||[];draw()})();
 function draw(){
- $("#b").innerHTML=`<h1>Pedí tu turno</h1><p style="color:var(--muted)">Marcá todos los horarios en los que podés venir. Mientras más marques, más fácil es acomodarte.</p>
+ $("#b").innerHTML=`<div class="brand">Bunker Barber Shop</div><h1>Pedí tu turno</h1><p style="color:var(--muted)">Marcá todos los horarios en los que podés venir. Mientras más marques, más fácil es acomodarte.</p>
  <form id="f" style="display:grid;gap:14px"><label>Nombre<input name="n" autocomplete="given-name" required></label><label>Apellido<input name="a" autocomplete="family-name"></label>
  <label>WhatsApp (con código de área, sin 0 ni 15)<input name="t" inputmode="tel" placeholder="3534123456" required></label>
  <label>Servicio<select name="s">${S.map(s=>`<option value="${s.id}">${esc(s.nombre)} · ${money(s.precio)}</option>`).join("")}</select></label>

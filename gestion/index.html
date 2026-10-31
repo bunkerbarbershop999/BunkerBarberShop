@@ -41,6 +41,14 @@ td{padding:6px 10px;min-height:48px;border-top:1px solid var(--rule);vertical-al
 .card{border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px}
 .login{max-width:340px;margin:12vh auto;display:grid;gap:12px}.login b{font:600 34px/1 "Bricolage Grotesque",sans-serif;color:var(--accent)}
 .seg{display:inline-flex}.seg button{border-radius:0;margin-left:-1px}.seg button:first-child{border-radius:6px 0 0 6px;margin:0}.seg button:last-child{border-radius:0 6px 6px 0}.seg button.on{background:var(--active);font-weight:500}
+#ia .fab{position:fixed;right:16px;bottom:16px;z-index:50;height:44px;padding:0 18px;border-radius:999px;background:var(--text);color:#fff;border-color:var(--text);font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+#ia .panel{position:fixed;right:16px;bottom:70px;z-index:50;width:min(380px,calc(100vw - 32px));height:min(560px,calc(100vh - 100px));display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden}
+#ia .panel[hidden]{display:none}
+#ia header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}#ia header span{color:var(--muted);font-size:12px;flex:1}#ia header button{border:0;background:none;height:28px;padding:0 6px;font-size:13px}
+#ia .msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.ia-m{max-width:90%;padding:8px 12px;border-radius:12px;overflow-wrap:anywhere}.ia-m.u{align-self:flex-end;background:var(--text);color:#fff}.ia-m.a{align-self:flex-start;background:var(--raised)}
+#ia .sug{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px}#ia .sug button{height:auto;padding:4px 10px;border-radius:999px;font-size:13px;text-align:left}
+#ia form{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border)}#ia form input{flex:1;min-width:0}
 @media(max-width:760px){body{display:block}aside{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:8px}.brand,.who{display:none}aside a{white-space:nowrap;flex:none}.sheet{margin:0;border-radius:0;border:0;padding:16px}}
 </style></head><body>
 <aside id="side"></aside><main class="sheet" id="v"></main><dialog id="d"></dialog>
@@ -74,7 +82,7 @@ function login(msg){$("#side").innerHTML="";$("#v").style.cssText="margin:0;bord
  $("#v").innerHTML=`<form class="login" id="lf"><b>Barbería Enzo</b><span style="color:var(--muted)">Gestión · acceso privado</span><input name="e" type="email" placeholder="Email" autocomplete="username" required><input name="p" type="password" placeholder="Contraseña" autocomplete="current-password" required><button class="p">Ingresar</button><span style="color:var(--negative)">${msg||""}</span></form>`;
  $("#lf").onsubmit=async e=>{e.preventDefault();const f=e.target,{error}=await sb.auth.signInWithPassword({email:f.e.value,password:f.p.value});error?login("Email o contraseña incorrectos."):location.reload()}}
 async function start(s){const{data:ok}=await sb.rpc("es_enzo");if(!ok){await sb.auth.signOut();return login("Esta cuenta no tiene acceso.")}
- who=s.user.email;$("#v").style.cssText="";ST.tab=location.hash.slice(1)||"cortes";await load()}
+ who=s.user.email;$("#v").style.cssText="";ST.tab=location.hash.slice(1)||"cortes";iaInit();await load()}
 async function load(){
  const r=await Promise.all([sb.from("clientes").select("*").order("apellido"),sb.from("servicios").select("*").order("precio"),sb.from("productos").select("*").eq("activo",true).order("nombre"),
   sb.from("planes").select("*,clientes(nombre,apellido)"),sb.from("solicitudes_turno").select("*,clientes(*),servicios(id,nombre,precio)").eq("estado","pendiente").order("created_at"),sb.from("atenciones").select("id,plan_id,estado").not("plan_id","is",null)]);
@@ -207,6 +215,21 @@ async function vReportes(){
  <p class="sub">Ingresos: cortes ${money(s("ingreso","corte"))} · planes ${money(s("ingreso","plan"))} · productos ${money(s("ingreso","producto"))}</p>
  <h3>Cortes por cliente</h3>${rank.length?`<div class="w"><table><tbody>${rank.map(r=>`<tr><td>${esc(r.n)}</td><td class="num">${r.c}</td></tr>`).join("")}</tbody></table></div>`:`<p class="empty">Sin cortes en el período.</p>`}`}
 
+/* ---------- BUNKER IA (asistente flotante, solo lectura) ---------- */
+let IA=[],iaBusy=false;
+const IASUG=["¿Cuánto entró hoy?","¿Quiénes me deben plata?","¿Qué turnos tengo mañana?","¿Qué cliente vino más este mes?","¿Cuánto gané este mes?","¿Qué productos tienen poco stock?"];
+const iaFmt=t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>");
+function iaInit(){if($("#ia"))return;const d=document.createElement("div");d.id="ia";
+ d.innerHTML=`<button class="fab" data-act="iaToggle" aria-label="Abrir Bunker IA">Bunker IA</button><section class="panel" hidden><header><b>Bunker IA</b><span>Solo lectura</span><button data-act="iaLimpiar">Limpiar</button><button data-act="iaToggle" aria-label="Cerrar">✕</button></header><div class="msgs" id="iam"></div><div class="sug" id="ias"></div><form id="iaf"><input name="m" placeholder="Preguntá algo sobre tu negocio…" autocomplete="off" maxlength="500"><button class="p">Enviar</button></form></section>`;
+ document.body.appendChild(d);$("#iaf").onsubmit=e=>{e.preventDefault();const i=e.target.m,t=i.value.trim();i.value="";iaSend(t)};iaRender()}
+function iaRender(){const m=$("#iam");if(!m)return;
+ m.innerHTML=(IA.length?"":`<div class="ia-m a">Hola, soy Bunker IA. Puedo responderte sobre cortes, clientes, caja, stock, planes y deudores. No puedo modificar nada, solo consultar.</div>`)+IA.map(x=>`<div class="ia-m ${x.r}">${iaFmt(x.t)}</div>`).join("")+(iaBusy?`<div class="ia-m a" style="color:var(--muted)">Pensando…</div>`:"");
+ $("#ias").innerHTML=IA.length?"":IASUG.map(q=>`<button data-act="iaq" data-v="${esc(q)}">${esc(q)}</button>`).join("");m.scrollTop=m.scrollHeight}
+async function iaSend(t){if(iaBusy||!t)return;IA.push({r:"u",t});iaBusy=true;iaRender();
+ const{data,error}=await sb.functions.invoke("bunker-ia",{body:{messages:IA.slice(-12).map(x=>({role:x.r==="u"?"user":"assistant",content:x.t}))}});
+ let msg=data?.reply;if(!msg){let e=error?.message||"error desconocido";try{const j=await error.context.json();if(j.error)e=j.error}catch(_){}msg="No pude responder: "+e}
+ IA.push({r:"a",t:msg});iaBusy=false;iaRender()}
+
 /* ---------- EVENTOS ---------- */
 const hoyOk=async(p,after)=>{if(await q(p))after?await after():await load()};
 const ACT={
@@ -241,6 +264,9 @@ const ACT={
  cobdeuda:async b=>{const d=ST.DEUD.find(x=>x.c.id===b.dataset.id),m=await pick(`Cobrar ${money(d.total)} a ${esc(d.c.nombre)}`);if(!m)return;
   if(d.cortes.length&&!await q(sb.from("atenciones").update({estado:"pagado",metodo_pago:m}).in("id",d.cortes.map(x=>x.id))))return;
   if(d.plan)await q(sb.from("planes").update({pagado:true,metodo_pago:m,fecha_pago:hoy()}).eq("id",d.plan.id));load()},
+ iaToggle:()=>{const p=$("#ia .panel");p.hidden=!p.hidden;if(!p.hidden)setTimeout(()=>$("#iaf").m.focus(),0)},
+ iaLimpiar:()=>{IA=[];iaRender()},
+ iaq:b=>iaSend(b.dataset.v),
  dia:b=>{ST.dia=new Date(Date.now()+ +b.dataset.id*864e5).toLocaleDateString("en-CA",{timeZone:"America/Argentina/Cordoba"});render()},
  remcorte:async b=>{const a=ST.A.find(x=>x.id===b.dataset.id),TZ="America/Argentina/Cordoba",ms=new Date(Date.now()+864e5).toLocaleDateString("en-CA",{timeZone:TZ}),
   cuando=ST.dia===hoy()?"hoy":ST.dia===ms?"mañana":"el "+new Date(a.fecha).toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long",timeZone:TZ});

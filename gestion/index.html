@@ -227,7 +227,7 @@ function iaRender(){const m=$("#iam");if(!m)return;
  $("#ias").innerHTML=IA.length?"":IASUG.map(q=>`<button data-act="iaq" data-v="${esc(q)}">${esc(q)}</button>`).join("");m.scrollTop=m.scrollHeight}
 async function iaSend(t){if(iaBusy||!t)return;IA.push({r:"u",t});iaBusy=true;iaRender();
  const{data,error}=await sb.functions.invoke("bunker-ia",{body:{messages:IA.slice(-12).map(x=>({role:x.r==="u"?"user":"assistant",content:x.t}))}});
- let msg=data?.reply;if(!msg){let e=error?.message||"error desconocido";try{const j=await error.context.json();if(j.error)e=j.error}catch(_){}msg="No pude responder: "+e}
+ let msg=data?.reply;if(!msg){let e=error?.message||"error desconocido";try{const r=error.context,t=await r.text();try{const j=JSON.parse(t);e=j.error||j.message||j.msg||t}catch(_){e=t||e}e=`(${r.status}) `+e}catch(_){}msg="No pude responder: "+e}
  IA.push({r:"a",t:msg});iaBusy=false;iaRender()}
 
 /* ---------- EVENTOS ---------- */
